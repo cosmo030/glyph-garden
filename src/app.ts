@@ -143,6 +143,8 @@ export async function start() {
   layout();
   window.addEventListener('resize', layout);
   active.enter(world);
+  // Test hook: ?debug exposes the world for automated screenshots
+  if (location.search.includes('debug')) (window as unknown as Record<string, unknown>).__gg = { world, species };
 
   // ---- Input -------------------------------------------------------------------
   const toCell = (e: PointerEvent) => {
