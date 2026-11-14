@@ -1,0 +1,36 @@
+# Runs on every push and pull request: type check, formatting check, and all three builds.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Type check and formatting
+        run: npm run check
+
+      - name: Build Chrome extension
+        run: npm run build
+
+      - name: Build Firefox add-on
+        run: npm run build:firefox
+
+      - name: Build web preview
+        run: npm run preview:build

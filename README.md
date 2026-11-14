@@ -1,53 +1,79 @@
 # Glyph Garden
 
-A new-tab page full of animals made of keyboard characters. Feed the koi.
+A browser new-tab page full of animals made of keyboard characters. Click to feed the koi.
+
+Every animal is drawn as a grid of small tiles, each holding a character like `#`, `%` or `/`.
+The koi swim like real fish: their body bends along the path they take, a swimming wave runs from
+head to tail, and they alternate between bursts of tail beats and gliding.
 
 Works in Chrome, Brave, Edge and other Chromium browsers, and in Firefox.
 
-## Status
+## Features
 
-- [x] Koi: schooling, tail wiggle, click to drop food, startle, eat, grow
-- [x] Tweaks panel: every parameter is a live slider, saved automatically, with presets
-- [x] WebGL2 renderer: every cell drawn in one instanced draw call
-- [ ] Butterfly, Jellyfish, Dragonfly, Frog, Crane, Crab
-- [ ] Store listings
+- **Koi pond**: schooling koi in five colour types. Click to drop food: nearby fish startle away from
+  the splash, then race back to eat and grow a little.
+- **Tweaks panel**: every number in the simulation is a live slider. Settings save automatically,
+  and you can copy and paste them as presets.
+- **Fast**: a WebGL2 renderer draws every cell in a single draw call, the simulation creates no
+  garbage while running, and everything pauses while the tab is hidden.
+- **Private**: no network requests, no analytics. See [Privacy](#privacy).
 
-## Develop
+Coming next: butterflies, jellyfish, dragonflies, frogs, cranes and crabs.
+
+## Install from source
+
+You need [Node.js](https://nodejs.org/) 22 or newer.
 
 ```bash
+git clone https://github.com/cosmo030/glyph-garden.git
+cd glyph-garden
 npm install
-npm run dev            # opens Chrome with the extension loaded, live reload
-npm run dev:firefox    # same for Firefox
-npm run preview:serve  # the page as a normal website (works on phones)
+npm run build
 ```
 
-## Build and package
+Then load it into your browser:
 
-```bash
-npm run build          # .output/chrome-mv3
-npm run build:firefox  # .output/firefox-mv2
-npm run zip            # store-ready zips for both
-```
+- **Chrome, Brave, Edge**: open `chrome://extensions` (or `brave://extensions`), turn on **Developer mode**,
+  click **Load unpacked** and choose the `.output/chrome-mv3` folder.
+- **Firefox**: run `npm run build:firefox`, open `about:debugging#/runtime/this-firefox`, click
+  **Load Temporary Add-on** and choose any file in `.output/firefox-mv2`.
 
-To try it without the stores: open `brave://extensions` (or `chrome://extensions`),
-turn on Developer mode, click **Load unpacked** and pick `.output/chrome-mv3`.
+Open a new tab.
 
-## How it fits together
+## Development
 
-```
-src/
-  params/schema.ts   every tunable value, declared once (min, max, step, default)
-  params/panel.ts    Tweaks panel, generated from the schema
-  params/store.ts    saves settings (extension storage, or localStorage on the web)
-  render/            WebGL2 glyph-grid renderer and character atlas
-  sim/               shared world, ripples, noise helpers
-  species/koi.ts     one file per animal: shape, behaviour, drawing
-  app.ts             page UI, input, fixed-timestep main loop
-entrypoints/newtab/  the new-tab page (HTML + CSS)
-```
+| Command                 | What it does                                                 |
+| ----------------------- | ------------------------------------------------------------ |
+| `npm run dev`           | Opens Chrome with the extension loaded and live reload       |
+| `npm run dev:firefox`   | The same in Firefox                                          |
+| `npm run preview:serve` | Runs the page as a normal website (handy for testing phones) |
+| `npm run build`         | Builds the Chrome extension into `.output/chrome-mv3`        |
+| `npm run build:firefox` | Builds the Firefox add-on into `.output/firefox-mv2`         |
+| `npm run zip`           | Creates store-ready zips for both browsers                   |
+| `npm run check`         | Type-checks and checks formatting (what CI runs)             |
+| `npm run format`        | Formats all files with Prettier                              |
 
-Add a parameter: add one line to `schema.ts`. Its slider appears in Tweaks automatically.
+How the code is organised, and how to add a parameter or a new animal:
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-Add an animal: create `src/species/<name>.ts` implementing `Species`, register it in `app.ts`.
+## Privacy
 
-Permissions: `storage` (saves your Tweaks) and `search` (the search box uses your default search engine).
+Glyph Garden collects nothing and sends nothing anywhere.
+
+- It asks for two permissions: `storage`, to save your Tweaks on your device, and `search`, so the
+  search box uses the search engine you already chose in your browser.
+- It makes no network requests of its own.
+
+## Contributing
+
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first. To report a
+security problem, see [SECURITY.md](SECURITY.md).
+
+## Credits
+
+Inspired by a short video of ASCII animals on a new-tab page by stephenz.mp4. This is an independent
+implementation; no code was copied.
+
+## License
+
+[MIT](LICENSE) © 2026 cosmo030
