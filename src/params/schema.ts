@@ -1,0 +1,173 @@
+// Every tunable value in the app is declared exactly once, here.
+// The Tweaks panel, saved settings, presets and defaults are all generated
+// from this list. Add a line here and its slider appears automatically.
+
+export type NumberParam = {
+  kind: 'number';
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  value: number;
+};
+export type ColorParam = { kind: 'color'; label: string; value: string };
+export type TextParam = { kind: 'text'; label: string; value: string };
+export type BoolParam = { kind: 'bool'; label: string; value: boolean };
+export type Param = NumberParam | ColorParam | TextParam | BoolParam;
+
+export type Group = { label: string; expanded?: boolean; params: Record<string, Param> };
+
+const num = (label: string, min: number, max: number, step: number, value: number): NumberParam => ({
+  kind: 'number',
+  label,
+  min,
+  max,
+  step,
+  value,
+});
+const color = (label: string, value: string): ColorParam => ({ kind: 'color', label, value });
+const text = (label: string, value: string): TextParam => ({ kind: 'text', label, value });
+const bool = (label: string, value: boolean): BoolParam => ({ kind: 'bool', label, value });
+
+export const schema = {
+  page: {
+    label: 'Page',
+    params: {
+      name: text('Your name', ''),
+      searchBlur: num('Search glass blur', 0, 40, 1, 14),
+      searchOpacity: num('Search glass tint', 0, 1, 0.01, 0.55),
+      showHint: bool('Show hint', true),
+    },
+  },
+  world: {
+    label: 'World',
+    expanded: true,
+    params: {
+      cellSize: num('Cell size (px)', 5, 28, 1, 11),
+      tileFill: num('Tile size', 0.4, 1, 0.01, 0.86),
+      tileRadius: num('Tile roundness', 0, 1, 0.01, 0.22),
+      glyphScale: num('Glyph size', 0.2, 1.2, 0.01, 0.82),
+      glyphOpacity: num('Glyph strength', 0, 1, 0.01, 0.6),
+      background: color('Background', '#0b0c0e'),
+      gridOpacity: num('Grid opacity', 0, 0.3, 0.005, 0.045),
+      gridEvery: num('Grid every n cells', 1, 8, 1, 1),
+      timeScale: num('Time scale', 0, 3, 0.01, 1),
+      currentAngle: num('Current direction (deg)', -180, 180, 1, -40),
+      currentStrength: num('Current strength', 0, 3, 0.01, 0.35),
+      cursorRadius: num('Cursor radius (cells)', 0, 40, 0.5, 9),
+      cursorPush: num('Cursor push', 0, 30, 0.1, 6),
+      maxDpr: num('Max pixel ratio', 1, 3, 0.25, 2),
+    },
+  },
+  koi: {
+    label: 'Koi',
+    expanded: true,
+    params: {
+      count: num('Count', 0, 150, 1, 32),
+      sizeMin: num('Size min', 0.3, 2.5, 0.01, 0.65),
+      sizeMax: num('Size max', 0.3, 2.5, 0.01, 1.3),
+      length: num('Body length', 6, 32, 0.5, 15),
+      width: num('Body width', 1.5, 12, 0.1, 3.7),
+      tailLength: num('Tail length', 0.05, 0.45, 0.01, 0.22),
+      tailSpread: num('Tail spread', 0, 2.5, 0.01, 0.95),
+      finLength: num('Fin length', 0, 5, 0.05, 1.7),
+      eyeSize: num('Eye size', 0, 1.5, 0.01, 0.55),
+      cruiseSpeed: num('Cruise speed', 0, 20, 0.1, 4.5),
+      sprintSpeed: num('Sprint speed', 0, 40, 0.1, 11),
+      acceleration: num('Acceleration', 0.1, 20, 0.1, 3),
+      turnRate: num('Turn rate', 0.1, 10, 0.05, 2.2),
+      wander: num('Wander', 0, 5, 0.01, 1.1),
+      wanderRate: num('Wander change rate', 0, 5, 0.01, 0.8),
+      wiggleAmp: num('Tail wiggle', 0, 2, 0.01, 0.55),
+      wiggleFreq: num('Wiggle speed', 0, 5, 0.01, 1.3),
+      schoolRadius: num('School radius', 0, 30, 0.5, 10),
+      separationDist: num('Personal space', 0, 15, 0.1, 6),
+      separation: num('Separation', 0, 10, 0.05, 3.5),
+      alignment: num('Alignment', 0, 5, 0.05, 0.7),
+      cohesion: num('Cohesion', 0, 5, 0.05, 0.2),
+      kickDamping: num('Startle damping', 0.1, 10, 0.05, 2.2),
+      patchAmount: num('Pattern amount', 0, 1, 0.01, 0.45),
+      patchScale: num('Pattern scale', 0.05, 1.2, 0.01, 0.38),
+      fringeOpacity: num('Fin & tail opacity', 0, 1, 0.01, 0.8),
+      shadeJitter: num('Tile shade variation', 0, 0.4, 0.005, 0.09),
+      mixKohaku: num('Mix: red & white', 0, 1, 0.01, 0.45),
+      mixOrange: num('Mix: orange', 0, 1, 0.01, 0.2),
+      mixGold: num('Mix: gold', 0, 1, 0.01, 0.12),
+      mixChagoi: num('Mix: brown', 0, 1, 0.01, 0.1),
+      mixShowa: num('Mix: black, red & white', 0, 1, 0.01, 0.13),
+      colWhite: color('White', '#ebe7df'),
+      colRed: color('Red', '#c81f2b'),
+      colOrange: color('Orange', '#e06a26'),
+      colGold: color('Gold', '#d9a623'),
+      colBrown: color('Brown', '#8c4a22'),
+      colBlack: color('Black', '#2b2b2e'),
+      colFin: color('Fins', '#a3a8b0'),
+      colEye: color('Eye', '#f4f4f4'),
+    },
+  },
+  food: {
+    label: 'Koi food',
+    params: {
+      perClick: num('Pellets per click', 1, 30, 1, 5),
+      spread: num('Spread (cells)', 0, 12, 0.1, 2.6),
+      life: num('Pellet life (s)', 1, 60, 0.5, 10),
+      drift: num('Drift', 0, 3, 0.01, 0.35),
+      senseRadius: num('Smell radius (cells)', 0, 120, 1, 38),
+      hunger: num('Hunger pull', 0, 15, 0.1, 5),
+      eatRadius: num('Bite radius', 0.2, 5, 0.05, 1.3),
+      landDelay: num('Splash-down delay (s)', 0, 3, 0.05, 0.5),
+      startle: num('Splash startle', 0, 40, 0.5, 9),
+      startleRadius: num('Splash radius', 0, 30, 0.5, 7),
+      growth: num('Growth per pellet', 0, 0.3, 0.005, 0.03),
+      maxGrowth: num('Max growth', 1, 2.5, 0.01, 1.35),
+      color: color('Pellet colour', '#d8b47a'),
+    },
+  },
+  ripple: {
+    label: 'Ripples',
+    params: {
+      speed: num('Speed (cells/s)', 1, 80, 0.5, 16),
+      life: num('Life (s)', 0.1, 4, 0.05, 0.9),
+      spacing: num('Dot spacing', 0.8, 8, 0.1, 1.8),
+      opacity: num('Opacity', 0, 1, 0.01, 0.6),
+      color: color('Colour', '#a7adb6'),
+    },
+  },
+} satisfies Record<string, Group>;
+
+export type Schema = typeof schema;
+type ValueOf<P> = P extends { value: infer V } ? V : never;
+export type Values = {
+  [G in keyof Schema]: { [K in keyof Schema[G]['params']]: ValueOf<Schema[G]['params'][K]> };
+};
+
+export function defaultValues(): Values {
+  const out: Record<string, Record<string, unknown>> = {};
+  for (const [g, group] of Object.entries(schema)) {
+    out[g] = {};
+    for (const [k, p] of Object.entries(group.params as Record<string, Param>)) out[g][k] = p.value;
+  }
+  return out as Values;
+}
+
+/** Copies saved values onto the defaults, ignoring unknown keys and clamping numbers. */
+export function mergeValues(target: Values, saved: unknown): void {
+  if (!saved || typeof saved !== 'object') return;
+  for (const [g, group] of Object.entries(schema)) {
+    const src = (saved as Record<string, Record<string, unknown>>)[g];
+    if (!src || typeof src !== 'object') continue;
+    const dst = (target as unknown as Record<string, Record<string, unknown>>)[g];
+    for (const [k, p] of Object.entries(group.params as Record<string, Param>)) {
+      const v = src[k];
+      if (p.kind === 'number' && typeof v === 'number' && Number.isFinite(v)) {
+        dst[k] = Math.min(p.max, Math.max(p.min, v));
+      } else if (p.kind === 'color' && typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v)) {
+        dst[k] = v;
+      } else if (p.kind === 'text' && typeof v === 'string') {
+        dst[k] = v.slice(0, 40);
+      } else if (p.kind === 'bool' && typeof v === 'boolean') {
+        dst[k] = v;
+      }
+    }
+  }
+}
