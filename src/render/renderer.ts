@@ -7,6 +7,7 @@ import type { RGB } from './color';
 
 const STRIDE = 20; // bytes per cell: x f32, y f32, bg u32, fg u32, glyph f32
 
+// Vertex shader: places one unit quad per cell and passes its colours and glyph slot on.
 const CELL_VS = `#version 300 es
 layout(location=0) in vec2 a_corner;
 layout(location=1) in vec2 a_cell;
@@ -30,6 +31,7 @@ void main() {
   v_slot = vec2(mod(a_glyph, u_atlasCols), floor(a_glyph / u_atlasCols));
 }`;
 
+// Fragment shader: a rounded tile (signed distance field) with the glyph on top.
 const CELL_FS = `#version 300 es
 precision highp float;
 in vec2 v_local;
@@ -64,6 +66,7 @@ void main() {
   outColor = col;
 }`;
 
+// Background: one full-screen triangle that paints the base colour and grid lines.
 const BG_VS = `#version 300 es
 const vec2 P[3] = vec2[3](vec2(-1.0, -1.0), vec2(3.0, -1.0), vec2(-1.0, 3.0));
 void main() { gl_Position = vec4(P[gl_VertexID], 0.0, 1.0); }`;
@@ -84,6 +87,7 @@ void main() {
   outColor = vec4(mix(u_bg, vec3(1.0), line * u_gridAlpha), 1.0);
 }`;
 
+/** Look of the grid and tiles; these come straight from the World Tweaks. */
 export type DrawStyle = {
   background: RGB;
   gridOpacity: number;
@@ -93,6 +97,12 @@ export type DrawStyle = {
   glyphScale: number;
 };
 
+/**
+ * Draws the background grid and any number of character cells.
+ *
+ * Usage per frame: `begin()`, then `push()` once per cell, then `draw()`.
+ * Cells pushed later are drawn on top of earlier ones.
+ */
 export class GlyphRenderer {
   readonly gl: WebGL2RenderingContext;
   private cellProg: WebGLProgram;
@@ -122,7 +132,18 @@ export class GlyphRenderer {
 
     this.cellProg = program(gl, CELL_VS, CELL_FS);
     this.bgProg = program(gl, BG_VS, BG_FS);
-    for (const n of ['u_cellPx', 'u_viewPx', 'u_atlasCols', 'u_atlas', 'u_atlasGrid', 'u_fill', 'u_radius', 'u_glyphScale', 'u_lod', 'u_cellPxF'])
+    for (const n of [
+      'u_cellPx',
+      'u_viewPx',
+      'u_atlasCols',
+      'u_atlas',
+      'u_atlasGrid',
+      'u_fill',
+      'u_radius',
+      'u_glyphScale',
+      'u_lod',
+      'u_cellPxF',
+    ])
       this.u[n] = gl.getUniformLocation(this.cellProg, n);
     for (const n of ['u_bg', 'u_gridAlpha', 'u_every', 'u_viewH'])
       this.u['bg_' + n] = gl.getUniformLocation(this.bgProg, n);
@@ -169,6 +190,7 @@ export class GlyphRenderer {
     this.grow(16384);
   }
 
+  /** Enlarges the cell buffer (doubling) so it holds at least `min` cells, keeping its contents. */
   private grow(min: number) {
     let cap = Math.max(this.capacity, 1024);
     while (cap < min) cap *= 2;
@@ -200,6 +222,7 @@ export class GlyphRenderer {
     return changed;
   }
 
+  /** Starts a new frame: forgets all cells pushed in the previous one. */
   begin() {
     this.count = 0;
   }
@@ -216,6 +239,7 @@ export class GlyphRenderer {
     this.f32[i + 4] = glyph;
   }
 
+  /** Paints the background, uploads this frame's cells and draws them in one call. */
   draw(s: DrawStyle) {
     const gl = this.gl;
     gl.viewport(0, 0, this.width, this.height);
@@ -255,6 +279,7 @@ export class GlyphRenderer {
   }
 }
 
+/** Compiles and links a shader program, throwing with the driver's message on failure. */
 function program(gl: WebGL2RenderingContext, vs: string, fs: string): WebGLProgram {
   const p = gl.createProgram()!;
   for (const [type, src] of [

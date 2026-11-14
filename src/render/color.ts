@@ -3,20 +3,18 @@
 
 export type RGB = [number, number, number];
 
+/** Parses `#rrggbb` into [r, g, b] (0-255). */
 export function hexToRgb(hex: string): RGB {
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
+/** Packs r, g, b (0-255) and alpha (0-1) into one 32-bit value. */
 export function pack(r: number, g: number, b: number, a: number): number {
-  return (
-    ((Math.round(a * 255) & 255) << 24) |
-    ((b & 255) << 16) |
-    ((g & 255) << 8) |
-    (r & 255)
-  ) >>> 0;
+  return (((Math.round(a * 255) & 255) << 24) | ((b & 255) << 16) | ((g & 255) << 8) | (r & 255)) >>> 0;
 }
 
+/** Packs a colour with an alpha that is clamped to 0-1. */
 export function packRgb(c: RGB, alpha: number): number {
   return pack(c[0], c[1], c[2], alpha < 0 ? 0 : alpha > 1 ? 1 : alpha);
 }

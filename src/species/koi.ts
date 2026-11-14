@@ -123,17 +123,20 @@ export class Koi implements Species {
     }
   }
 
+  /** How far off-screen a fish may swim before wrapping, so it never pops in or out visibly. */
   private margin(world: World) {
     const k = world.params.koi;
     return k.length * (1 + k.tailLength) * Math.max(k.sizeMin, k.sizeMax) * world.params.food.maxGrowth + 4;
   }
 
+  /** Spawns or removes fish so the count matches the Count slider. */
   private syncCount(world: World) {
     const want = Math.min(CAP, Math.round(world.params.koi.count));
     while (this.n < want) this.spawn(world);
     if (this.n > want) this.n = want;
   }
 
+  /** Adds one fish at a random spot with random size, colour type and timing. */
   private spawn(world: World) {
     const k = world.params.koi;
     const i = this.n++;
@@ -169,6 +172,7 @@ export class Koi implements Species {
     }
   }
 
+  /** Drops food pellets at the click, makes a ripple, and startles fish near the splash. */
   pointerDown(x: number, y: number, world: World) {
     const f = world.params.food;
     for (let j = 0; j < f.perClick; j++) {
@@ -202,6 +206,7 @@ export class Koi implements Species {
     }
   }
 
+  /** Removes pellet i by moving the last pellet into its slot. */
   private removePellet(i: number) {
     const last = --this.pn;
     this.px[i] = this.px[last];
@@ -212,6 +217,7 @@ export class Koi implements Species {
     this.plife[i] = this.plife[last];
   }
 
+  /** Sorts fish into grid buckets (linked lists in typed arrays) for fast neighbour lookups. */
   private buildGrid(world: World) {
     const k = world.params.koi;
     const m = this.margin(world);
@@ -232,6 +238,7 @@ export class Koi implements Species {
     }
   }
 
+  /** One fixed simulation step: pellets, then for each fish: steering, strokes, turning, speed, spine. */
   step(dt: number, world: World) {
     this.syncCount(world);
     const k = world.params.koi;
@@ -240,7 +247,7 @@ export class Koi implements Species {
 
     // Pellets drift, slow down, and dissolve
     const pdamp = Math.exp(-1.2 * dt);
-    for (let i = 0; i < this.pn; ) {
+    for (let i = 0; i < this.pn;) {
       this.page[i] += dt;
       if (this.page[i] >= this.plife[i]) {
         this.removePellet(i);
@@ -280,7 +287,13 @@ export class Koi implements Species {
       let dy = Math.sin(h) + Math.sin(h + this.wanderA[i]) * k.wander + curY;
 
       // Schooling
-      let ax = 0, ay = 0, cx = 0, cy = 0, sx = 0, sy = 0, nb = 0;
+      let ax = 0,
+        ay = 0,
+        cx = 0,
+        cy = 0,
+        sx = 0,
+        sy = 0,
+        nb = 0;
       const gcx = Math.floor((xi - this.gx0) / this.gcell);
       const gcy = Math.floor((yi - this.gy0) / this.gcell);
       for (let oy = -1; oy <= 1; oy++) {
@@ -482,6 +495,7 @@ export class Koi implements Species {
     this.sdy = dy / l;
   }
 
+  /** Sizes the per-cell stamp buffer that stops a fish from drawing the same cell twice. */
   private prepareStamp(r: GlyphRenderer) {
     const w = Math.ceil(r.cols) + 2;
     const h = Math.ceil(r.rows) + 2;
@@ -508,6 +522,7 @@ export class Koi implements Species {
     return true;
   }
 
+  /** Draws every fish (eyes, body, tail fin, side fins, in that order) and then the pellets. */
   draw(r: GlyphRenderer, world: World) {
     const k = world.params.koi;
     const white = rgb(k.colWhite);
@@ -556,7 +571,13 @@ export class Koi implements Species {
       const v = this.variant[i] as Variant;
       const base = v === Variant.Orange ? orange : v === Variant.Gold ? gold : v === Variant.Chagoi ? brown : white;
       const patch =
-        v === Variant.Orange ? this.patchOrange : v === Variant.Gold ? this.patchGold : v === Variant.Chagoi ? orange : red;
+        v === Variant.Orange
+          ? this.patchOrange
+          : v === Variant.Gold
+            ? this.patchGold
+            : v === Variant.Chagoi
+              ? orange
+              : red;
       const pscale = k.patchScale / Math.max(0.3, s);
       const pthr = 1 - k.patchAmount;
       const sz = Math.max(0.5, s);
@@ -722,6 +743,7 @@ function fringeChar(angle: number) {
   return FRINGE[Math.round(a / (Math.PI / 4)) % 4];
 }
 
+/** Picks a colour type at random, weighted by the Mix sliders. */
 function pickVariant(k: World['params']['koi']): Variant {
   const w = [k.mixKohaku, k.mixOrange, k.mixGold, k.mixChagoi, k.mixShowa];
   const total = w.reduce((a, b) => a + b, 0);

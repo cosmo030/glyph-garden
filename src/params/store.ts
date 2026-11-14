@@ -17,6 +17,7 @@ function extensionStorage(): ExtStorage | null {
   return g.browser?.storage?.local ?? g.chrome?.storage?.local ?? null;
 }
 
+/** Reads saved settings, or null if there are none (or storage is unavailable). */
 export async function loadSettings(): Promise<unknown> {
   try {
     const ext = extensionStorage();

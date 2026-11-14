@@ -16,6 +16,7 @@ export function glyph(ch: string): number {
   return index.get(ch) ?? 0;
 }
 
+/** Renders all characters white-on-transparent into a grid of SLOT x SLOT squares. */
 export function buildAtlas(): { canvas: HTMLCanvasElement; cols: number; rows: number } {
   const rows = Math.ceil(CHARS.length / COLS);
   const canvas = document.createElement('canvas');

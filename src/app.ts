@@ -1,3 +1,11 @@
+/**
+ * App entry point: wires the page together.
+ *
+ * - Loads saved Tweaks and builds the shared `World` the animals live in.
+ * - Builds the page UI (greeting, search box, species switcher, Tweaks button).
+ * - Runs the main loop: a fixed-timestep simulation (60 steps per second) and one
+ *   render per animation frame. The loop stops completely while the tab is hidden.
+ */
 import { defaultValues, mergeValues, type Values } from './params/schema';
 import { loadSettings, saveSettingsSoon } from './params/store';
 import type { Stats } from './params/panel';
@@ -20,6 +28,7 @@ const ROSTER = [
   { id: 'crab', label: 'Crab', dot: '#e0584f' },
 ];
 
+/** Boots the new-tab page. Called once from `entrypoints/newtab/main.ts`. */
 export async function start() {
   const values: Values = defaultValues();
   mergeValues(values, await loadSettings());
@@ -45,6 +54,7 @@ export async function start() {
   const stats: Stats = { fps: 0, cells: 0, animals: 0 };
 
   // ---- Page UI -------------------------------------------------------------
+  /** Refreshes everything on the page that depends on the time of day or on Page settings. */
   function updatePage() {
     const p = values.page;
     const hour = new Date().getHours();
@@ -108,6 +118,7 @@ export async function start() {
     }
   });
 
+  /** Called by the Tweaks panel whenever a value changes. */
   function onChange(group: string, key: string) {
     saveSettingsSoon(values);
     if (group === 'world' && (key === 'cellSize' || key === 'maxDpr')) layout();
@@ -126,6 +137,7 @@ export async function start() {
     return;
   }
 
+  /** Sizes the canvas to the window and rescales animal positions to the new grid. */
   function layout() {
     const w = values.world;
     const dpr = Math.min(window.devicePixelRatio || 1, w.maxDpr);

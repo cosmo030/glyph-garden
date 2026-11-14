@@ -68,7 +68,8 @@ export function createPanel(container: HTMLElement, values: Values, stats: Stats
   const box = document.createElement('div');
   box.className = 'tweaks-box';
   box.hidden = true;
-  box.innerHTML = '<textarea spellcheck="false" placeholder="Paste settings JSON here"></textarea><div><button type="button" data-act="apply">Apply</button><button type="button" data-act="close">Close</button></div>';
+  box.innerHTML =
+    '<textarea spellcheck="false" placeholder="Paste settings JSON here"></textarea><div><button type="button" data-act="apply">Apply</button><button type="button" data-act="close">Close</button></div>';
   container.appendChild(box);
   const area = box.querySelector('textarea')!;
   function showBox(text: string) {
@@ -97,10 +98,12 @@ export function createPanel(container: HTMLElement, values: Values, stats: Stats
   return pane;
 }
 
+/** Notifies about every parameter (after a reset or paste replaced many values at once). */
 function all(onChange: Change) {
   for (const [g, group] of Object.entries(schema)) for (const k of Object.keys(group.params)) onChange(g, k);
 }
 
+/** Shows a short message at the bottom of the panel. */
 function flash(container: HTMLElement, msg: string) {
   const el = document.createElement('div');
   el.className = 'tweaks-toast';

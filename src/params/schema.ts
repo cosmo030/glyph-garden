@@ -161,6 +161,7 @@ export type Values = {
   [G in keyof Schema]: { [K in keyof Schema[G]['params']]: ValueOf<Schema[G]['params'][K]> };
 };
 
+/** A fresh copy of every parameter at its default value. */
 export function defaultValues(): Values {
   const out: Record<string, Record<string, unknown>> = {};
   for (const [g, group] of Object.entries(schema)) {
