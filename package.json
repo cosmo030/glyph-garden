@@ -1,6 +1,6 @@
 {
   "name": "glyph-garden",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A new-tab page full of animated animals made of keyboard characters",
   "license": "MIT",
   "author": "cosmo030",
@@ -35,7 +35,9 @@
     "postinstall": "wxt prepare",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run typecheck && npm run format:check"
+    "check": "npm run typecheck && npm run format:check",
+    "icons": "node scripts/make-icons.mjs",
+    "store:assets": "node scripts/store-assets.mjs"
   },
   "devDependencies": {
     "@tweakpane/core": "^2.0.5",

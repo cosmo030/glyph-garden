@@ -16,8 +16,9 @@ Works in Chrome, Brave, Edge and other Chromium browsers, and in Firefox.
   Meadow. The scene you pick is remembered.
 - **Night meadow**: fireflies drift over swaying grass under a few twinkling stars. Each firefly
   flashes on its own cycle, and neighbours nudge each other, so over half a minute or so the meadow
-  falls into flashing waves and groups. Press and hold to light a soft ring that the fireflies gather
-  and circle around; tap to make the nearby ones flash.
+  falls into flashing waves and groups. Each flash glows as a round ramp of characters (. : + *) on
+  faint tiles. Press and hold to light a pulsing ring that the fireflies gather and circle around;
+  tap to make the nearby ones flash.
 - **Koi pond**: schooling koi in five colour types. Click to drop food: nearby fish startle away from
   the splash, then race back to eat and grow a little.
 - **Tune panel**: every number in the simulation is a live slider. Settings save automatically,
@@ -58,6 +59,8 @@ Open a new tab.
 | `npm run build`         | Builds the Chrome extension into `.output/chrome-mv3`        |
 | `npm run build:firefox` | Builds the Firefox add-on into `.output/firefox-mv2`         |
 | `npm run zip`           | Creates store-ready zips for both browsers                   |
+| `npm run icons`         | Redraws the icon PNGs from `art/icon.svg`                    |
+| `npm run store:assets`  | Retakes the store screenshots and promo images               |
 | `npm run check`         | Type-checks and checks formatting (what CI runs)             |
 | `npm run format`        | Formats all files with Prettier                              |
 
@@ -66,7 +69,8 @@ How the code is organised, and how to add a parameter or a new animal:
 
 ## Privacy
 
-Glyph Garden collects nothing and sends nothing anywhere.
+Glyph Garden collects nothing and sends nothing anywhere. The full policy is in
+[PRIVACY.md](PRIVACY.md).
 
 - It asks for two permissions: `storage`, to save your Tune settings on your device, and `search`, so the
   search box uses the search engine you already chose in your browser.

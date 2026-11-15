@@ -49,8 +49,22 @@ src/
     meadow.ts         the Meadow scene (night): fireflies, grass, stars
   ui/
     greeting.ts       the clock text, and picking a greeting from the scene's lines
+public/icon/          the extension icon PNGs (16, 32, 48, 128), made from art/icon.svg
+art/                  icon.svg, the source of the icon
+scripts/              make-icons.mjs and store-assets.mjs (Node only, driving a local Chromium browser)
+store/                store listing text, screenshots and promo images (see below)
 docs/                 this file
 ```
+
+## Store release files
+
+`npm run icons` redraws `public/icon/*.png` from `art/icon.svg`; WXT finds the PNGs by name and adds
+them to both manifests. `npm run store:assets` builds the web preview and takes the store
+screenshots (1280x800) and promo images into `store/`, so they can be redone after a visual change.
+Both scripts only talk to a browser on this machine. `store/listing.md` and
+`store/amo-reviewer-notes.md` hold the text for the two store forms, and `PRIVACY.md` is the privacy
+policy both stores link to. `npm run zip` makes the Chrome zip, the Firefox zip and the Firefox
+sources zip in `.output/`; `wxt.config.ts` keeps secrets and generated images out of the sources zip.
 
 ## Units and coordinates
 
@@ -142,8 +156,14 @@ See the header comment in `src/scenes/meadow.ts`. In short:
 
 - **Flash cycle.** Each firefly has a phase from 0 to 1 that advances at its own rate (Flash rate, plus
   or minus Rate spread). The flash is the first Flash length of the cycle: a quick rise, then a slower
-  fade. The rest of the cycle it is dark. It is drawn as a "•" with a halo of fainter "·" cells (Glow
-  radius, Glow strength) that shrinks as the flash fades. No tiles are drawn behind it.
+  fade. The rest of the cycle it is dark, with only a very faint "•" body (Resting body).
+- **Glow.** Every cell whose centre is within Glow radius R of a flashing firefly gets an intensity
+  `I = flash * (1 - d / R)^2` (d is the distance in cells, so the glow is round), scaled by Glow
+  strength. `I` picks a character from dim to bright (`·` `:` `+` `*`) and a faint tile of the firefly
+  colour behind it at alpha `I * Glow tile strength`; cells below a small threshold are skipped. The
+  firefly's own cell is a solid tile with a bright "•". Intensities go into a per-cell map first and
+  the brighter value wins where glows overlap, so the picture does not depend on draw order. The map
+  and its list of touched cells are typed arrays that only change size when the grid does.
 - **Synchronising** (pulse-coupled oscillators). When a firefly flashes it pushes every unlit
   neighbour within Sync radius forward in its cycle, by up to Coupling (less with distance). A firefly
   pushed past the end of its cycle flashes at once and pushes its own neighbours in the same step, so
@@ -153,12 +173,16 @@ See the header comment in `src/scenes/meadow.ts`. In short:
 - **Movement.** Fireflies drift on a slowly turning heading, with a soft spring toward a personal
   hover height (mostly the middle and upper sky). They wrap at the sides, and are kept above the
   grass.
-- **Touch.** Press and hold (longer than Tap length) fades in a ring of dots at the cursor; fireflies
+- **Touch.** Press and hold (longer than Tap length) fades in a ring of "•" on faint tiles at the
+  cursor, with a very faint tinted fill inside (Light fill). The ring breathes in radius and brightness
+  (Light pulse, Light pulse speed) around Light radius. Fireflies
   within Gather radius are pulled toward the ring and pushed around it, so they gather and circle.
   Letting go fades the light out and they drift apart. A shorter press is a tap: every firefly within
   Tap flash radius flashes at once, and the coupling carries the flash outward.
-- **Grass and sky.** The grass is a band of "|", "/", "\\", "'" and "," blades whose lean follows a
-  slow travelling wind wave (Grass height, density, sway; Wind speed). Stars are "." cells whose places
+- **Grass and sky.** The grass is a band of "|", "/" and "\\" blades in two greens (Grass colour and
+  Grass colour (dark), picked per blade), a little darker at the root, on a faint tile (Grass tile
+  strength). Each blade ends in a lighter tip (Grass tip colour) that leans with the wind. The lean
+  follows a slow travelling wind wave (Grass height, density, sway; Wind speed). Stars are "." cells whose places
   come from a hash, so none are stored. The background is the scene's own deep blue-black.
 
 ## Common changes
