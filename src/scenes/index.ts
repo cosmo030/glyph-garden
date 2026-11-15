@@ -3,10 +3,11 @@
 // To add a scene: import it here and add one entry to `scenes`. See docs/ARCHITECTURE.md.
 import type { Values } from '../params/schema';
 import type { Hour, Scene } from '../sim/world';
+import { Meadow } from './meadow';
 import { Pond } from './pond';
 
 /** Every scene, in the order the name button cycles through them. */
-export const scenes: Scene[] = [new Pond()];
+export const scenes: Scene[] = [new Pond(), new Meadow()];
 
 /** Turns an Hour into a number of hours, reading "Day starts" or "Night starts" from the Page settings. */
 function hourOf(h: Hour, page: Values['page']): number {
@@ -24,7 +25,7 @@ export function isInWindow(scene: Scene, hour: number, page: Values['page']): bo
 
 /**
  * The scene to show at `hour`: the first one whose window contains it. If none does (for example
- * a night with only a daytime scene registered), the first scene stays on rather than showing nothing.
+ * a gap between two windows), the first scene stays on rather than showing nothing.
  */
 export function sceneForHour(list: readonly Scene[], hour: number, page: Values['page']): Scene {
   return list.find((s) => isInWindow(s, hour, page)) ?? list[0]!;

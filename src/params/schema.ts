@@ -131,6 +131,42 @@ export const schema = {
       colEye: color('Eye', '#f4f4f4'),
     },
   },
+  meadow: {
+    label: 'Meadow',
+    params: {
+      background: color('Background', '#050a14'),
+      // Fireflies
+      count: num('Fireflies', 0, 300, 1, 90),
+      drift: num('Drift speed (cells/s)', 0, 6, 0.05, 1.2),
+      wander: num('Wander', 0, 3, 0.01, 1),
+      colFirefly: color('Firefly colour', '#d6ea5a'),
+      // Flashing. Each firefly has a flash cycle (phase 0 to 1); the flash is the first part of it.
+      flashRate: num('Flash rate (Hz)', 0.1, 2, 0.01, 0.5),
+      rateSpread: num('Rate spread', 0, 0.5, 0.01, 0.12),
+      flashLength: num('Flash length (of cycle)', 0.05, 0.6, 0.01, 0.3),
+      glowRadius: num('Glow radius (cells)', 0, 6, 0.1, 3),
+      glowStrength: num('Glow strength', 0, 4, 0.01, 2.5),
+      // Synchronising: when a firefly flashes, flashing neighbours' cycles jump ahead by up to `coupling`
+      coupling: num('Coupling', 0, 0.4, 0.005, 0.05),
+      syncRadius: num('Sync radius (cells)', 2, 60, 0.5, 14),
+      // Touch: press and hold gathers fireflies around a light, a short tap makes them flash
+      gatherRadius: num('Gather radius (cells)', 5, 80, 0.5, 30),
+      gatherPull: num('Gather pull', 0, 10, 0.05, 4),
+      orbitSpeed: num('Orbit speed', 0, 10, 0.05, 3),
+      lightRadius: num('Light radius (cells)', 2, 20, 0.5, 6),
+      lightFade: num('Light fade (s)', 0.1, 3, 0.05, 0.8),
+      tapTime: num('Tap length (s)', 0.05, 1, 0.01, 0.25),
+      tapRadius: num('Tap flash radius (cells)', 5, 100, 0.5, 30),
+      // Grass and sky
+      grassHeight: num('Grass height (cells)', 0, 30, 0.5, 8),
+      grassDensity: num('Grass density', 0, 1, 0.01, 0.75),
+      grassSway: num('Grass sway', 0, 3, 0.01, 1),
+      windSpeed: num('Wind speed', 0, 3, 0.01, 0.6),
+      colGrass: color('Grass colour', '#4fae6a'),
+      starCount: num('Stars', 0, 300, 1, 45),
+      colStar: color('Star colour', '#b9c6e8'),
+    },
+  },
   food: {
     label: 'Koi food',
     params: {

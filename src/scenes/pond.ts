@@ -3,7 +3,7 @@ import { packRgb, packShade, shadeInto, type RGB } from '../render/color';
 import { glyph } from '../render/atlas';
 import { hash2, noise2, gauss, rand } from '../sim/noise';
 import { rgb } from '../sim/colors';
-import type { Scene, TimeOfDay, World } from '../sim/world';
+import type { Band, Scene, TimeOfDay, World } from '../sim/world';
 
 // The Pond scene: a school of koi drawn as tiles of characters. It is the daytime habitat.
 // Clicking drops food pellets; nearby fish do an escape turn, then come back to eat.
@@ -45,6 +45,13 @@ export class Pond implements Scene {
   readonly hint = 'click to feed';
   // Follows the Page settings, so moving "Day starts" or "Night starts" moves the pond too.
   readonly timeOfDay: TimeOfDay = { start: 'dayStarts', end: 'nightStarts' };
+  // The first letter may be lowercased when a name goes in front, so no line starts with a proper noun.
+  readonly greetings: Record<Band, readonly string[]> = {
+    morning: ['The water is still.', 'A slow start is a fine start.', 'Soft light on the pond.'],
+    afternoon: ['Warm water, slow fish.', 'Take a breath. Then go on.', 'The pond is wide awake.'],
+    evening: ['The light is turning gold.', 'Easy now. The day is done.', 'Quiet is on its way.'],
+    night: ['The pond is resting.', 'Dark water, soft ripples.', 'It is late and calm.'],
+  };
 
   // Fish, stored as parallel typed arrays (no per-fish objects)
   private n = 0;

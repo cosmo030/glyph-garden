@@ -16,6 +16,12 @@ All notable changes are listed here. The format follows
   bottom left or the left and right arrow keys. A hand pick is saved.
 - A clock above the greeting, and new calm greeting lines for the morning, afternoon, evening and
   night.
+- Night meadow scene, shown from the night start to the day start: fireflies that flash and
+  synchronise into waves and groups (pulse-coupled), swaying grass, twinkling stars and a deep
+  blue-black sky. Press and hold lights a ring that fireflies gather around; tap to make nearby ones
+  flash. New Tune group "Meadow" with sliders for all of it.
+- Each scene can set its own background colour (the Meadow does) and its own greeting lines. The Pond
+  keeps its colour and its lines, and the Meadow has its own calm lines for every part of the day.
 
 ### Changed
 
