@@ -251,11 +251,6 @@ body {
   cursor: default;
 }
 
-.habitat-mode {
-  font-size: 11px;
-  color: var(--muted);
-}
-
 .hint {
   font-size: 11px;
   color: var(--muted);

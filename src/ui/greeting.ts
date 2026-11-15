@@ -1,8 +1,7 @@
 // The clock and the greeting line at the top of the page.
 //
 // The greeting is a short, calm sentence chosen by the time of day. Each scene supplies its own
-// lines for each band. The bands below are about wording only (when it feels like "evening");
-// the hours that switch scenes are separate and live in the Page settings.
+// lines for each band. The bands are about wording only (when it feels like "evening").
 import type { Band } from '../sim/world';
 
 const BAND_ORDER: readonly Band[] = ['morning', 'afternoon', 'evening', 'night'];

@@ -17,19 +17,7 @@ export type World = {
 export type Band = 'morning' | 'afternoon' | 'evening' | 'night';
 
 /**
- * An hour of the day: a number from 0 to 23, or the name of the Page setting that holds one
- * (so a scene can follow "Day starts" or "Night starts" instead of a fixed time).
- */
-export type Hour = number | 'dayStarts' | 'nightStarts';
-
-/**
- * When a scene is on show, from `start` up to (not including) `end`. A window whose end is
- * before its start wraps past midnight; equal start and end means all day.
- */
-export type TimeOfDay = { start: Hour; end: Hour };
-
-/**
- * One habitat: a scene with its own creatures and a window of the day when it is shown.
+ * One habitat: a scene with its own creatures, look and greeting lines.
  * A scene owns its state, moves it in `step` and draws it in `draw`. Only the active scene runs.
  */
 export interface Scene {
@@ -39,8 +27,6 @@ export interface Scene {
   readonly name: string;
   /** Hint under the name, for example "click to feed". */
   readonly hint: string;
-  /** When this scene is shown while Page > "Scene follows the clock" is on. */
-  readonly timeOfDay: TimeOfDay;
   /** The greeting lines for each part of the day. One is picked per day and band. Calm and short. */
   readonly greetings: Record<Band, readonly string[]>;
   /**

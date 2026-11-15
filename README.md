@@ -11,10 +11,9 @@ Works in Chrome, Brave, Edge and other Chromium browsers, and in Firefox.
 
 ## Features
 
-- **Scenes**: each habitat is a scene with its own hours of the day, and by default the scene follows
-  your clock: the Pond by day (06:00 to 19:00 by default) and the Meadow by night (change the hours in
-  Tune > Page). Click the scene name at the bottom left, or press the left and right arrow keys, to
-  step through Auto and each scene.
+- **Scenes**: each habitat is a scene with its own creatures, look and greeting lines. Click the scene
+  name at the bottom left, or press the left and right arrow keys, to step through the Pond and the
+  Meadow. The scene you pick is remembered.
 - **Night meadow**: fireflies drift over swaying grass under a few twinkling stars. Each firefly
   flashes on its own cycle, and neighbours nudge each other, so over half a minute or so the meadow
   falls into flashing waves and groups. Press and hold to light a soft ring that the fireflies gather

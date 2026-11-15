@@ -44,8 +44,8 @@ src/
     noise.ts          hashing and smooth noise
     colors.ts         cached hex-to-RGB parsing
   scenes/
-    index.ts          the scene registry, and picking a scene by the clock
-    pond.ts           the Pond scene (day): koi movement, feeding, drawing
+    index.ts          the scene registry (the order the name button cycles through)
+    pond.ts           the Pond scene: koi movement, feeding, drawing
     meadow.ts         the Meadow scene (night): fireflies, grass, stars
   ui/
     greeting.ts       the clock text, and picking a greeting from the scene's lines
@@ -62,13 +62,10 @@ docs/                 this file
 
 ## Scenes
 
-A **scene** is a habitat: its own creatures, its own hours of the day. It implements the `Scene`
+A **scene** is a habitat: its own creatures, look and greeting lines. It implements the `Scene`
 interface in `src/sim/world.ts`:
 
 - `id`, `name`, `hint`: the saved key, the name shown bottom left ("Pond") and the hint under it.
-- `timeOfDay`: `{ start, end }`, when the scene is shown. Each end is an hour (0 to 23) or the name of
-  a Page setting (`'dayStarts'`, `'nightStarts'`), so the Pond follows the Day starts and Night starts
-  sliders. A window whose end is before its start runs through midnight; equal ends mean all day.
 - `greetings`: the scene's own greeting lines for each band (morning, afternoon, evening, night). The
   page picks one per band per day (`src/ui/greeting.ts`), and puts the name in front if there is one.
 - `background?(world)`: an optional background colour (`#rrggbb`). It is a method so it can read the
@@ -79,15 +76,12 @@ interface in `src/sim/world.ts`:
 
 **Which scene is on show** (`src/app.ts`, `src/scenes/index.ts`):
 
-- With **Page > Scene follows the clock** on (the default), `sceneForHour` returns the first scene whose
-  window contains the current time (the Pond by day, the Meadow by night). If none does, the first
-  registered scene stays on.
-- The clock is re-checked once a minute (on the minute) and whenever the tab becomes visible, so the
-  scene changes without a reload.
-- Clicking the scene name, or pressing the left and right arrow keys while no text field has focus,
-  steps through **Auto, each scene in order, Auto**. A hand pick turns the clock off and is saved
-  (`page.autoScene` and the hidden `page.scene`); stepping back to Auto turns it on again. With one
-  scene registered the name is plain text and nothing cycles.
+- Scenes are only picked by hand. Clicking the scene name, or pressing the left and right arrow keys
+  while no text field has focus, steps through the scenes in registry order and wraps round. The pick
+  is saved as the hidden `page.scene`; if it is empty or stale, the first registered scene is used.
+  With one scene registered the name is plain text and nothing cycles.
+- The clock and greeting are redrawn once a minute (on the minute) and whenever the tab becomes
+  visible. The greeting band (morning, afternoon, evening, night) is about wording only.
 
 ## Renderer
 
@@ -183,16 +177,14 @@ objects.
 ### Add a scene
 
 1. Create `src/scenes/<name>.ts` with a class that implements `Scene` from `src/sim/world.ts`. Give it
-   an `id`, a `name`, a `hint` and a `timeOfDay` window (for example `{ start: 19, end: 6 }` for a night
-   scene, or `{ start: 'nightStarts', end: 'dayStarts' }` to follow the Page sliders), and `greetings`:
-   a few calm lines for each of morning, afternoon, evening and night. If the scene wants its own
+   an `id`, a `name`, a `hint` and `greetings`: a few calm lines for each of morning, afternoon, evening and night. If the scene wants its own
    background, add `background(world)` returning a colour from its settings. Use `pond.ts` (or
    `meadow.ts`) as a template: typed arrays for state, no allocation in `step` or `draw`.
 2. Add a parameter group for it in `schema.ts` (every tunable number and colour, including its
    background).
 3. In `src/scenes/index.ts`, import it and add one entry to the `scenes` array. That is all: the name
-   button, the arrow keys and the clock all pick it up. The array order is the cycling order, and when
-   two windows overlap the earlier one wins.
+   button and the arrow keys pick it up. The array order is the cycling order, and the first scene is
+   the one shown until the user picks another.
 
 ### Add a character
 
