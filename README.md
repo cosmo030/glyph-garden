@@ -17,8 +17,9 @@ Works in Chrome, Brave, Edge and other Chromium browsers, and in Firefox.
   step through Auto and each scene.
 - **Night meadow**: fireflies drift over swaying grass under a few twinkling stars. Each firefly
   flashes on its own cycle, and neighbours nudge each other, so over half a minute or so the meadow
-  falls into flashing waves and groups. Press and hold to light a soft ring that the fireflies gather
-  and circle around; tap to make the nearby ones flash.
+  falls into flashing waves and groups. Each flash glows as a round ramp of characters (. : + *) on
+  faint tiles. Press and hold to light a pulsing ring that the fireflies gather and circle around;
+  tap to make the nearby ones flash.
 - **Koi pond**: schooling koi in five colour types. Click to drop food: nearby fish startle away from
   the splash, then race back to eat and grow a little.
 - **Tune panel**: every number in the simulation is a live slider. Settings save automatically,

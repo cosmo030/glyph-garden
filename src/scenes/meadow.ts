@@ -18,15 +18,24 @@ import type { Band, Scene, TimeOfDay, World } from '../sim/world';
 // waves. Over a few cycles neighbours fall into step and the meadow flashes in groups. With
 // coupling 0 nothing is nudged and every firefly flashes on its own, at random.
 //
-// Touch: press and hold lights a soft ring at the cursor and the fireflies nearby gather and circle
-// it; let go and they drift apart again. A short tap makes every firefly within `tapRadius` flash
-// at once, and the coupling carries that flash outward.
+// The glow is an ASCII light ramp. Every cell within `glowRadius` of a flashing firefly gets an
+// intensity I = flash * (1 - d / R)^2 (d is the distance in cells from the firefly, so the glow is
+// round), and I picks a character from dim to bright (. : + *) with a faint tile of the firefly
+// colour behind it. Where two glows overlap the brighter cell wins, so the picture does not depend
+// on the order the fireflies are drawn in.
+//
+// Touch: press and hold lights a pulsing ring with a faint tinted fill at the cursor, and the
+// fireflies nearby gather and circle it; let go and they drift apart again. A short tap makes every
+// firefly within `tapRadius` flash at once, and the coupling carries that flash outward.
 
 const CAP = 300; // max fireflies
 const SEED = 7; // makes the stars and grass the same every time
 
-const FLY = glyph('•');
-const SPARK = glyph('·');
+const CORE = glyph('•'); // a firefly's own cell, and the dots of the hold ring
+// The light ramp, dim to bright, and the intensity at which each step starts
+const RAMP = [glyph('·'), glyph(':'), glyph('+'), glyph('*')];
+const RAMP_FROM = [0, 0.12, 0.28, 0.5];
+const GLOW_MIN = 0.04; // cells dimmer than this are skipped
 const STAR = glyph('.');
 const BLADE = glyph('|');
 const LEAN_RIGHT = glyph('/');
@@ -73,6 +82,13 @@ export class Meadow implements Scene {
   // Fireflies that flashed this step and still have to nudge their neighbours
   private queue = new Int32Array(CAP);
   private qn = 0;
+
+  // Glow intensity per cell for the frame being drawn, and the cells that were touched (so clearing
+  // is cheap). A value below 1 is a ramp cell; a firefly's own cell holds 1 + its flash. These are
+  // only reallocated when the grid size changes, never per frame.
+  private glow = new Float32Array(0);
+  private touched = new Int32Array(0);
+  private tn = 0;
 
   // Press and hold
   private held = false;
@@ -250,60 +266,145 @@ export class Meadow implements Scene {
     }
   }
 
-  /** Draws the stars, then the grass, then the fireflies and their halos, then the light under your finger. */
+  /** Draws the stars, then the grass, then the hold light, then the fireflies and their glow. */
   draw(r: GlyphRenderer, world: World) {
-    const m = world.params.meadow;
     const sky = this.skyBottom(world);
     this.drawStars(r, world, sky);
     this.drawGrass(r, world);
+    this.drawLight(r, world);
+    this.drawFireflies(r, world);
+  }
 
-    // ---- Fireflies: body "•" plus a halo of fainter "·", both only while flashing ----
+  /**
+   * The fireflies. Lit ones add their glow to a per-cell intensity map (keeping the brighter value
+   * where glows overlap), then each touched cell is drawn once: a ramp character with a faint tile,
+   * or, for a firefly's own cell, a solid tile with a bright "•". Dark ones keep a very faint body.
+   */
+  private drawFireflies(r: GlyphRenderer, world: World) {
+    const m = world.params.meadow;
+    const cols = Math.ceil(world.cols);
+    const rows = Math.ceil(world.rows);
+    if (this.glow.length !== cols * rows) {
+      this.glow = new Float32Array(cols * rows);
+      this.touched = new Int32Array(cols * rows);
+    }
+    const glow = this.glow;
+    const touched = this.touched;
+    this.tn = 0;
+
     const col = rgb(m.colFirefly);
     const L = m.flashLength;
     const rise = L * 0.2; // quick rise over the first fifth of the flash, then a slower fade
+    const R = m.glowRadius;
+    const R2 = R * R;
+    const reach = Math.ceil(R);
+    const rest = packShade(col, -0.35, m.restGlow);
+
     for (let i = 0; i < this.n; i++) {
       const p = this.phase[i];
-      if (p >= L) continue; // dark between flashes
-      const t = p < rise ? p / rise : 1 - (p - rise) / (L - rise);
-      const flash = p < rise ? t : Math.pow(t, 1.6); // fades a little slower than it would at t * t
-      if (flash < 0.02) continue;
-      const cx = Math.floor(this.x[i]);
-      const cy = Math.floor(this.y[i]);
-      const gr = m.glowRadius * Math.sqrt(flash); // the halo shrinks as the flash fades
-      if (gr > 0.4 && m.glowStrength > 0) {
-        const R = Math.ceil(gr);
-        for (let oy = -R; oy <= R; oy++) {
-          for (let ox = -R; ox <= R; ox++) {
-            const d2 = ox * ox + oy * oy;
-            if (d2 === 0 || d2 > gr * gr) continue;
-            const a = m.glowStrength * flash * (1 - Math.sqrt(d2) / (gr + 0.5));
-            if (a < 0.02) continue;
-            r.push(cx + ox, cy + oy, 0, packShade(col, 0.3, a), SPARK);
+      const px = this.x[i];
+      const py = this.y[i];
+      const cx = Math.floor(px);
+      const cy = Math.floor(py);
+      const flash = p >= L ? 0 : p < rise ? p / rise : Math.pow(1 - (p - rise) / (L - rise), 1.6);
+      if (flash < 0.02) {
+        r.push(cx, cy, 0, rest, CORE); // dark between flashes: only a faint body
+        continue;
+      }
+      // Ramp cells: I = flash * (1 - d / R)^2 for every cell centre within R of the firefly
+      if (R > 0.3 && m.glowStrength > 0) {
+        for (let oy = -reach; oy <= reach; oy++) {
+          const gy = cy + oy;
+          if (gy < 0 || gy >= rows) continue;
+          for (let ox = -reach; ox <= reach; ox++) {
+            const gx = cx + ox;
+            if (gx < 0 || gx >= cols) continue;
+            const dx = gx + 0.5 - px;
+            const dy = gy + 0.5 - py;
+            const d2 = dx * dx + dy * dy;
+            if (d2 >= R2) continue; // a round glow, no square corners
+            const k = 1 - Math.sqrt(d2) / R;
+            const I = Math.min(0.999, m.glowStrength * flash * k * k);
+            if (I < GLOW_MIN) continue;
+            const idx = gy * cols + gx;
+            const was = glow[idx];
+            if (was === 0) touched[this.tn++] = idx;
+            if (I > was) glow[idx] = I;
           }
         }
       }
-      r.push(cx, cy, 0, packShade(col, 0.5 * flash, 0.55 + 0.45 * flash), FLY);
+      // The firefly's own cell holds 1 + flash, so it beats any ramp value and the brighter of two cores wins
+      if (cx >= 0 && cx < cols && cy >= 0 && cy < rows) {
+        const idx = cy * cols + cx;
+        const was = glow[idx];
+        if (was === 0) touched[this.tn++] = idx;
+        if (1 + flash > was) glow[idx] = 1 + flash;
+      }
     }
 
-    // ---- The light: a faint ring of dots around the cursor while it is held ----
-    if (this.light > 0.02) {
-      const col2 = rgb(m.colFirefly);
-      const rad = m.lightRadius * (1 + 0.04 * Math.sin(world.time * 3));
-      const dots = Math.max(10, Math.floor((TAU * rad) / 1.6));
-      const fg = packRgb(col2, 0.6 * this.light);
-      let lastX = 1e9;
-      let lastY = 1e9;
-      for (let d = 0; d < dots; d++) {
-        const a = (d / dots) * TAU + world.time * 0.3;
-        const px = Math.floor(world.cursor.x + Math.cos(a) * rad);
-        const py = Math.floor(world.cursor.y + Math.sin(a) * rad);
-        if (px === lastX && py === lastY) continue;
-        lastX = px;
-        lastY = py;
-        r.push(px, py, 0, fg, FLY);
+    // One push per touched cell, then clear the map for the next frame
+    for (let k = 0; k < this.tn; k++) {
+      const idx = touched[k];
+      const v = glow[idx];
+      glow[idx] = 0;
+      const gy = Math.floor(idx / cols);
+      const gx = idx - gy * cols;
+      if (v >= 1) {
+        const f = v - 1; // a firefly's own cell: a solid tile and a bright "•"
+        r.push(gx, gy, packShade(col, 0.2 * f, 0.5 + 0.5 * f), packShade(col, 0.6 + 0.35 * f, 1), CORE);
+      } else {
+        let step = 0;
+        while (step < 3 && v >= RAMP_FROM[step + 1]) step++;
+        r.push(gx, gy, packRgb(col, v * m.tileGlow), packShade(col, 0.5 * v, Math.min(1, 0.55 + v)), RAMP[step]);
       }
-      r.push(Math.floor(world.cursor.x), Math.floor(world.cursor.y), 0, packRgb(col2, 0.8 * this.light), FLY);
     }
+    this.tn = 0;
+  }
+
+  /**
+   * The light while held: a very faint tinted fill, and a brighter ring of "•" on faint tiles that
+   * breathes in radius and brightness (Light pulse, Light pulse speed).
+   */
+  private drawLight(r: GlyphRenderer, world: World) {
+    if (this.light <= 0.02) return;
+    const m = world.params.meadow;
+    const col = rgb(m.colFirefly);
+    const beat = Math.sin(world.time * TAU * m.lightPulseSpeed);
+    const rad = m.lightRadius * (1 + m.lightPulse * beat);
+    const glowK = this.light * (0.85 + 0.15 * beat);
+    const cx = world.cursor.x;
+    const cy = world.cursor.y;
+    const x0 = Math.floor(cx);
+    const y0 = Math.floor(cy);
+
+    // Fill: every cell centre inside the ring, a little stronger toward the middle
+    const reach = Math.ceil(rad);
+    for (let oy = -reach; oy <= reach; oy++) {
+      for (let ox = -reach; ox <= reach; ox++) {
+        const dx = x0 + ox + 0.5 - cx;
+        const dy = y0 + oy + 0.5 - cy;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d >= rad) continue;
+        r.push(x0 + ox, y0 + oy, packRgb(col, m.lightFill * this.light * (0.6 + 0.4 * (1 - d / rad))), 0, 0);
+      }
+    }
+
+    // Ring: "•" about one cell apart, turning slowly, each on a faint tile
+    const dots = Math.max(12, Math.floor((TAU * rad) / 1.1));
+    const fg = packShade(col, 0.4, Math.min(1, 0.95 * glowK));
+    const bg = packRgb(col, 0.45 * glowK);
+    let lastX = 1e9;
+    let lastY = 1e9;
+    for (let d = 0; d < dots; d++) {
+      const a = (d / dots) * TAU + world.time * 0.3;
+      const px = Math.floor(cx + Math.cos(a) * rad);
+      const py = Math.floor(cy + Math.sin(a) * rad);
+      if (px === lastX && py === lastY) continue;
+      lastX = px;
+      lastY = py;
+      r.push(px, py, bg, fg, CORE);
+    }
+    r.push(x0, y0, packRgb(col, 0.35 * glowK), packShade(col, 0.5, Math.min(1, glowK)), CORE);
   }
 
   /** Faint "." stars in the upper sky. Their places come from a hash, so none are stored. */
@@ -320,32 +421,44 @@ export class Meadow implements Scene {
     }
   }
 
-  /** A band of grass along the bottom: blades of "|", "/", "\\", "'" and "," swaying in a slow wind. */
+  /**
+   * A band of grass along the bottom. Each blade is "|", "/" or "\" in one of two greens (dark or
+   * mid, picked by a hash), a little darker at the root, and ends in a lighter tip that leans the
+   * way the wind pushes it. The wind is a long travelling wave plus a slower one, so it gusts.
+   */
   private drawGrass(r: GlyphRenderer, world: World) {
     const m = world.params.meadow;
     if (m.grassHeight <= 0 || m.grassDensity <= 0) return;
-    const base = rgb(m.colGrass);
+    const dark = rgb(m.colGrassDark);
+    const mid = rgb(m.colGrass);
+    const tip = rgb(m.colGrassTip);
     const bottom = Math.floor(world.rows) - 1;
     const cols = Math.ceil(world.cols);
     const t = world.time * m.windSpeed;
     for (let x = 0; x < cols; x++) {
       if (hash2(x, 4, SEED) > m.grassDensity) continue; // no blade in this column
       const height = Math.max(1, Math.round(m.grassHeight * (0.3 + 0.7 * hash2(x, 5, SEED))));
-      const tone = 0.8 + 0.4 * hash2(x, 6, SEED); // each blade is a slightly different green
-      // Wind: a long wave travelling across the field plus a slower, longer one, so it gusts
+      const tone = 0.9 + 0.2 * hash2(x, 6, SEED); // each blade is a slightly different green
+      const base = hash2(x, 7, SEED) < 0.5 ? dark : mid;
       const wind = Math.sin(x * 0.11 - t * 1.6) + 0.5 * Math.sin(x * 0.047 - t * 0.9 + 1.3);
       const tipOffset = m.grassSway * wind * 0.35 * height; // how far the tip leans, in cells
       let off = 0;
       for (let k = 0; k < height; k++) {
         const u = (k + 1) / height;
         const nextOff = Math.round(tipOffset * u * u); // blades bend more toward the tip
-        let g: number;
-        if (k === height - 1) g = TIP;
-        else if (height <= 2 && k === 0) g = STUB;
-        else g = nextOff > off ? LEAN_RIGHT : nextOff < off ? LEAN_LEFT : BLADE;
-        // Darker at the root, lighter at the tip
-        const shade = tone * (0.55 + 0.6 * u);
-        r.push(x + off, bottom - k, 0, pack(base[0] * shade, base[1] * shade, base[2] * shade, 1), g);
+        let g = nextOff > off ? LEAN_RIGHT : nextOff < off ? LEAN_LEFT : BLADE;
+        let fg: number;
+        if (k === height - 1) {
+          // The tip: a lighter shade, leaning with the wind (an apostrophe when it is calm)
+          g = tipOffset > 0.6 ? LEAN_RIGHT : tipOffset < -0.6 ? LEAN_LEFT : TIP;
+          // (clamped: pack() wraps a channel above 255 instead of capping it)
+          fg = pack(Math.min(255, tip[0] * tone), Math.min(255, tip[1] * tone), Math.min(255, tip[2] * tone), 1);
+        } else {
+          if (height <= 2 && k === 0) g = STUB;
+          const shade = tone * (0.8 + 0.2 * u); // a little darker at the root
+          fg = pack(base[0] * shade, base[1] * shade, base[2] * shade, 1);
+        }
+        r.push(x + off, bottom - k, pack(base[0], base[1], base[2], m.grassTile * (0.5 + 0.5 * u)), fg, g);
         off = nextOff;
       }
     }
