@@ -1,6 +1,7 @@
 # Glyph Garden
 
-A browser new-tab page full of animals made of keyboard characters. Click to feed the koi.
+A browser new-tab page where animals made of keyboard characters live in habitats that change with
+the time of day. Right now there is a koi pond: click to feed the koi.
 
 Every animal is drawn as a grid of small tiles, each holding a character like `#`, `%` or `/`.
 The koi swim like real fish: their body bends along the path they take, a swimming wave runs from
@@ -10,15 +11,20 @@ Works in Chrome, Brave, Edge and other Chromium browsers, and in Firefox.
 
 ## Features
 
+- **Scenes**: each habitat is a scene with its own hours of the day, and by default the scene follows
+  your clock. The Pond's hours are 06:00 to 19:00 (change them in Tune > Page); until there is a
+  night scene, the Pond stays on after dark. Once there is more than one scene, click the scene name
+  at the bottom left, or press the left and right arrow keys, to step through Auto and each scene.
 - **Koi pond**: schooling koi in five colour types. Click to drop food: nearby fish startle away from
   the splash, then race back to eat and grow a little.
-- **Tweaks panel**: every number in the simulation is a live slider. Settings save automatically,
+- **Tune panel**: every number in the simulation is a live slider. Settings save automatically,
   and you can copy and paste them as presets.
 - **Fast**: a WebGL2 renderer draws every cell in a single draw call, the simulation creates no
   garbage while running, and everything pauses while the tab is hidden.
 - **Private**: no network requests, no analytics. See [Privacy](#privacy).
 
-Coming next: butterflies, jellyfish, dragonflies, frogs, cranes and crabs.
+Coming next: more scenes, including a night habitat. Butterflies, jellyfish, dragonflies, frogs,
+cranes and crabs are planned.
 
 ## Install from source
 
@@ -60,7 +66,7 @@ How the code is organised, and how to add a parameter or a new animal:
 
 Glyph Garden collects nothing and sends nothing anywhere.
 
-- It asks for two permissions: `storage`, to save your Tweaks on your device, and `search`, so the
+- It asks for two permissions: `storage`, to save your Tune settings on your device, and `search`, so the
   search box uses the search engine you already chose in your browser.
 - It makes no network requests of its own.
 

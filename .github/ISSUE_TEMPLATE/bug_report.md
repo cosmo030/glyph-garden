@@ -17,4 +17,4 @@ labels: bug
 
 **Screenshot or recording** (if it's visual)
 
-**Your Tweaks** (optional: Tweaks > Presets > Copy settings, then paste here)
+**Your Tune settings** (optional: Tune > Presets > Copy settings, then paste here)

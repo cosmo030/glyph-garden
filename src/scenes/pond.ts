@@ -3,9 +3,9 @@ import { packRgb, packShade, shadeInto, type RGB } from '../render/color';
 import { glyph } from '../render/atlas';
 import { hash2, noise2, gauss, rand } from '../sim/noise';
 import { rgb } from '../sim/colors';
-import type { Species, World } from '../sim/world';
+import type { Scene, TimeOfDay, World } from '../sim/world';
 
-// Koi: a school of fish drawn as tiles of characters.
+// The Pond scene: a school of koi drawn as tiles of characters. It is the daytime habitat.
 // Clicking drops food pellets; nearby fish do an escape turn, then come back to eat.
 //
 // How a fish moves (like a real koi):
@@ -38,11 +38,13 @@ enum Variant {
   Showa, // white with red and black
 }
 
-export class Koi implements Species {
-  readonly id = 'koi';
-  readonly label = 'Koi';
-  readonly dot = '#d9a623';
+/** The koi pond: schooling fish that you feed by clicking. Active from the day start to the night start. */
+export class Pond implements Scene {
+  readonly id = 'pond';
+  readonly name = 'Pond';
   readonly hint = 'click to feed';
+  // Follows the Page settings, so moving "Day starts" or "Night starts" moves the pond too.
+  readonly timeOfDay: TimeOfDay = { start: 'dayStarts', end: 'nightStarts' };
 
   // Fish, stored as parallel typed arrays (no per-fish objects)
   private n = 0;
@@ -205,6 +207,9 @@ export class Koi implements Species {
       }
     }
   }
+
+  /** The pond has nothing to do when the press ends: food is dropped on press, not on release. */
+  pointerUp() {}
 
   /** Removes pellet i by moving the last pellet into its slot. */
   private removePellet(i: number) {

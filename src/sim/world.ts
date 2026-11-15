@@ -1,7 +1,9 @@
+// The shared World, the Scene interface every habitat implements, and the ripple effects
+// that any scene can start (clicks, bites).
 import type { Values } from '../params/schema';
 import type { GlyphRenderer } from '../render/renderer';
 
-/** Shared state every species can read. Units are grid cells and seconds. */
+/** Shared state every scene can read. Units are grid cells and seconds. */
 export type World = {
   cols: number;
   rows: number;
@@ -12,15 +14,31 @@ export type World = {
 };
 
 /**
- * One kind of animal. Each species owns its creatures, moves them in `step`
- * and draws them in `draw`. Only the active species runs.
+ * An hour of the day: a number from 0 to 23, or the name of the Page setting that holds one
+ * (so a scene can follow "Day starts" or "Night starts" instead of a fixed time).
  */
-export interface Species {
+export type Hour = number | 'dayStarts' | 'nightStarts';
+
+/**
+ * When a scene is on show, from `start` up to (not including) `end`. A window whose end is
+ * before its start wraps past midnight; equal start and end means all day.
+ */
+export type TimeOfDay = { start: Hour; end: Hour };
+
+/**
+ * One habitat: a scene with its own creatures and a window of the day when it is shown.
+ * A scene owns its state, moves it in `step` and draws it in `draw`. Only the active scene runs.
+ */
+export interface Scene {
+  /** Stable key, saved in settings when the scene is picked by hand. */
   readonly id: string;
-  readonly label: string;
-  readonly dot: string; // colour of the dot in the species switcher
-  readonly hint: string; // bottom-left hint text
-  /** Called when the species becomes active: (re)spawn its animals. */
+  /** Name shown bottom-left, for example "Pond". */
+  readonly name: string;
+  /** Hint under the name, for example "click to feed". */
+  readonly hint: string;
+  /** When this scene is shown while Page > "Scene follows the clock" is on. */
+  readonly timeOfDay: TimeOfDay;
+  /** Called when the scene becomes active: (re)spawn its creatures. */
   enter(world: World): void;
   /** Called when the grid size changes, with the scale factor applied to positions. */
   rescale(sx: number, sy: number, world: World): void;
@@ -30,7 +48,9 @@ export interface Species {
   draw(r: GlyphRenderer, world: World): void;
   /** Click or tap at grid position (x, y), in cells. */
   pointerDown(x: number, y: number, world: World): void;
-  /** Number of animals currently alive (shown in Tweaks > Performance). */
+  /** The press that began on the canvas ended, at grid position (x, y). Lets a scene react to press-and-hold. */
+  pointerUp(x: number, y: number, world: World): void;
+  /** Number of creatures currently alive (shown in Tune > Performance). */
   count(): number;
 }
 

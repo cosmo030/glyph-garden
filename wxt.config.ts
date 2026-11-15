@@ -6,7 +6,7 @@ export default defineConfig({
   manifest: ({ browser }) => ({
     name: 'Glyph Garden',
     description: 'A new tab full of animals made of keyboard characters. Feed the koi.',
-    // storage: saves your Tweaks. search: sends the search box to your default engine.
+    // storage: saves your Tune settings. search: sends the search box to your default engine.
     permissions: ['storage', 'search'],
     ...(browser === 'firefox'
       ? {

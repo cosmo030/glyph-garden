@@ -87,7 +87,7 @@ void main() {
   outColor = vec4(mix(u_bg, vec3(1.0), line * u_gridAlpha), 1.0);
 }`;
 
-/** Look of the grid and tiles; these come straight from the World Tweaks. */
+/** Look of the grid and tiles; these come straight from the World settings in Tune. */
 export type DrawStyle = {
   background: RGB;
   gridOpacity: number;

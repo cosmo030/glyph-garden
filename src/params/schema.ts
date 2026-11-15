@@ -1,5 +1,5 @@
 // Every tunable value in the app is declared exactly once, here.
-// The Tweaks panel, saved settings, presets and defaults are all generated
+// The Tune panel, saved settings, presets and defaults are all generated
 // from this list. Add a line here and its slider appears automatically.
 
 export type NumberParam = {
@@ -11,7 +11,8 @@ export type NumberParam = {
   value: number;
 };
 export type ColorParam = { kind: 'color'; label: string; value: string };
-export type TextParam = { kind: 'text'; label: string; value: string };
+/** A text value. `hidden` keeps it saved and in presets, but out of the Tune panel. */
+export type TextParam = { kind: 'text'; label: string; value: string; hidden?: boolean };
 export type BoolParam = { kind: 'bool'; label: string; value: boolean };
 export type Param = NumberParam | ColorParam | TextParam | BoolParam;
 
@@ -26,7 +27,7 @@ const num = (label: string, min: number, max: number, step: number, value: numbe
   value,
 });
 const color = (label: string, value: string): ColorParam => ({ kind: 'color', label, value });
-const text = (label: string, value: string): TextParam => ({ kind: 'text', label, value });
+const text = (label: string, value: string, hidden = false): TextParam => ({ kind: 'text', label, value, hidden });
 const bool = (label: string, value: boolean): BoolParam => ({ kind: 'bool', label, value });
 
 export const schema = {
@@ -37,6 +38,11 @@ export const schema = {
       searchBlur: num('Search glass blur', 0, 10, 1, 10),
       searchOpacity: num('Search glass tint', 0, 1, 0.01, 0.85),
       showHint: bool('Show hint', false),
+      autoScene: bool('Scene follows the clock', true),
+      dayStarts: num('Day starts (hour)', 0, 23, 1, 6),
+      nightStarts: num('Night starts (hour)', 0, 23, 1, 19),
+      // The id of the scene picked by hand (used while "Scene follows the clock" is off). Not shown in Tune.
+      scene: text('Scene', '', true),
     },
   },
   world: {

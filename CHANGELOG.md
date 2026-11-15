@@ -10,6 +10,12 @@ All notable changes are listed here. The format follows
 
 - MIT license, architecture guide, contributing guide, security policy.
 - Continuous integration: type check, formatting check and all builds on every push and pull request.
+- Scenes: each habitat is a scene with its own hours of the day. The koi are now the "Pond" scene.
+  The scene follows your clock by default (new Page settings: Scene follows the clock, Day starts,
+  Night starts), is re-checked every minute, and can be picked by hand with the scene name at the
+  bottom left or the left and right arrow keys. A hand pick is saved.
+- A clock above the greeting, and new calm greeting lines for the morning, afternoon, evening and
+  night.
 
 ### Changed
 
@@ -19,6 +25,9 @@ All notable changes are listed here. The format follows
   affected.
 - The "Search glass blur" slider now goes from 0 to 10 px (was 0 to 40) and defaults to 10. A saved
   value above 10 is clamped to 10.
+- New look for the page: the scene name and hint sit bottom left, and an icon-only sliders button
+  (labelled "Tune") sits bottom right. The animal switcher, the "Tweaks" button and the toast are gone.
+- "Tweaks" is now called "Tune" (the panel, the README and the docs). Your saved settings are kept.
 
 ### Fixed
 

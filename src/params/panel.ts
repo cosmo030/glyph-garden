@@ -5,12 +5,21 @@ export type Stats = { fps: number; cells: number; animals: number };
 
 type Change = (group: string, key: string) => void;
 
+// The panel that is currently on screen (it is rebuilt by "Reset everything").
+let current: Pane | null = null;
+
+/** Re-reads every value into the open panel, for when the page changes a setting itself (e.g. cycling scenes). */
+export function refreshPanel(): void {
+  current?.refresh();
+}
+
 /**
- * Builds the Tweaks panel straight from the schema: one folder per group,
+ * Builds the Tune panel straight from the schema: one folder per group,
  * one control per parameter, plus preset tools and a live performance readout.
  */
 export function createPanel(container: HTMLElement, values: Values, stats: Stats, onChange: Change) {
-  const pane = new Pane({ container, title: 'Tweaks' });
+  const pane = new Pane({ container, title: 'Tune' });
+  current = pane;
   const bag = values as unknown as Record<string, Record<string, unknown>>;
 
   const perf = pane.addFolder({ title: 'Performance', expanded: false });
@@ -21,6 +30,7 @@ export function createPanel(container: HTMLElement, values: Values, stats: Stats
   for (const [g, group] of Object.entries(schema)) {
     const folder = pane.addFolder({ title: group.label, expanded: 'expanded' in group ? group.expanded : false });
     for (const [k, p] of Object.entries(group.params as Record<string, Param>)) {
+      if (p.kind === 'text' && p.hidden) continue; // saved, but not a control
       const opts: Record<string, unknown> = { label: p.label };
       if (p.kind === 'number') Object.assign(opts, { min: p.min, max: p.max, step: p.step });
       if (p.kind === 'color') opts.view = 'color';
@@ -66,7 +76,7 @@ export function createPanel(container: HTMLElement, values: Values, stats: Stats
 
   // Text box for pasting or copying settings JSON
   const box = document.createElement('div');
-  box.className = 'tweaks-box';
+  box.className = 'tune-box';
   box.hidden = true;
   box.innerHTML =
     '<textarea spellcheck="false" placeholder="Paste settings JSON here"></textarea><div><button type="button" data-act="apply">Apply</button><button type="button" data-act="close">Close</button></div>';
@@ -106,7 +116,7 @@ function all(onChange: Change) {
 /** Shows a short message at the bottom of the panel. */
 function flash(container: HTMLElement, msg: string) {
   const el = document.createElement('div');
-  el.className = 'tweaks-toast';
+  el.className = 'tune-toast';
   el.textContent = msg;
   container.appendChild(el);
   setTimeout(() => el.remove(), 1600);

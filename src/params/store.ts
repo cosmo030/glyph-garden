@@ -1,4 +1,4 @@
-// Saves and loads Tweaks. Uses extension storage when running as an extension
+// Saves and loads the Tune settings. Uses extension storage when running as an extension
 // (Chrome and Firefox both support chrome.storage.local), and falls back to
 // localStorage when the page runs as a normal website (the phone preview).
 
