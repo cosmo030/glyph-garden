@@ -44,7 +44,7 @@ A new tab must open instantly. In code that runs every frame (`step`, `draw`):
 
 - Don't allocate: no new objects, arrays, closures or strings. Use typed arrays and reuse scratch values.
 - Draw through `renderer.push()` only.
-- Check Tweaks > Performance before and after your change.
+- Check Tune > Performance before and after your change.
 
 ## Adding parameters
 
@@ -59,7 +59,7 @@ treat it as leaked: revoke it, then remove it from history.
 
 ## Commit messages
 
-Write the first line as a short summary in the imperative (`Add crab species`, `Fix tail flicker`),
+Write the first line as a short summary in the imperative (`Add crab scene`, `Fix tail flicker`),
 under about 70 characters. Add detail below a blank line if needed.
 
 ## License

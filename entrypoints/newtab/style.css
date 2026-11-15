@@ -40,83 +40,44 @@ body {
 }
 
 .ui button,
-.ui form,
-.ui nav {
+.ui form {
   pointer-events: auto;
 }
 
-/* Species switcher */
-.species {
+/* Tune button (icon only, bottom-right) + panel */
+.tune-btn {
   position: absolute;
-  top: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 2px;
-  padding: 3px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(20, 21, 24, 0.7);
-  /* Only the unprefixed property: the build minifier (lightningcss) adds -webkit- itself where needed.
-     Writing both by hand made it keep just the prefixed one, which Chrome and Brave ignore. */
-  backdrop-filter: blur(10px);
-  max-width: calc(100vw - 24px);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.species button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
-  font: 500 12px var(--font);
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.species button .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-
-.species button[aria-pressed='true'] {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text);
-}
-
-.species button.soon {
-  opacity: 0.45;
-}
-
-/* Tweaks button + panel */
-.tweaks-btn {
-  position: absolute;
-  top: 14px;
   right: 14px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 11px;
+  bottom: 14px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 50%;
   background: rgba(20, 21, 24, 0.7);
-  color: var(--text);
-  font: 500 12px var(--font);
+  color: var(--muted);
   cursor: pointer;
 }
 
-.tweaks {
+.tune-btn:hover,
+.tune-btn[aria-expanded='true'] {
+  color: var(--text);
+}
+
+.tune-btn:focus-visible,
+.habitat-name:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+}
+
+.tune {
   position: fixed;
-  top: 54px;
+  bottom: 60px;
   right: 12px;
   width: min(330px, calc(100vw - 24px));
-  max-height: calc(100dvh - 66px);
+  max-height: calc(100dvh - 76px);
   overflow-y: auto;
   border-radius: 10px;
   z-index: 10;
@@ -127,18 +88,18 @@ body {
   --tp-label-foreground-color: #9a9da3;
 }
 
-.tweaks .tp-lblv_l {
+.tune .tp-lblv_l {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.tweaks-box {
+.tune-box {
   padding: 8px;
   background: rgba(22, 23, 26, 0.96);
 }
 
-.tweaks-box textarea {
+.tune-box textarea {
   width: 100%;
   height: 110px;
   resize: vertical;
@@ -150,13 +111,13 @@ body {
   padding: 6px;
 }
 
-.tweaks-box div {
+.tune-box div {
   display: flex;
   gap: 6px;
   margin-top: 6px;
 }
 
-.tweaks-box button {
+.tune-box button {
   flex: 1;
   padding: 6px;
   border: 0;
@@ -167,7 +128,7 @@ body {
   cursor: pointer;
 }
 
-.tweaks-toast {
+.tune-toast {
   position: sticky;
   bottom: 8px;
   margin: 8px;
@@ -191,6 +152,13 @@ body {
   gap: 18px;
 }
 
+.clock {
+  margin: 0 0 -8px;
+  font: 12px var(--mono);
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+
 .greeting {
   margin: 0;
   font: 500 clamp(22px, 3.2vw, 30px) / 1.2 var(--font);
@@ -208,7 +176,8 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   background: rgba(18, 19, 22, var(--glass-tint));
-  /* Unprefixed only, see .species above. */
+  /* Only the unprefixed property: the build minifier (lightningcss) adds -webkit- itself where needed.
+     Writing both by hand made it keep just the prefixed one, which Chrome and Brave ignore. */
   backdrop-filter: blur(var(--glass-blur));
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
 }
@@ -249,56 +218,66 @@ body {
   cursor: pointer;
 }
 
-.hint {
+/* Bottom-left: the scene name, then the hint */
+.habitat {
   position: absolute;
-  left: 12px;
-  bottom: 10px;
-  font: 11px var(--mono);
+  left: 14px;
+  bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: var(--mono);
+}
+
+.habitat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.habitat-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: 13px var(--mono);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+/* With a single scene there is nothing to cycle, so the name is plain text. */
+.habitat-name:disabled {
+  color: var(--text);
+  cursor: default;
+}
+
+.habitat-mode {
+  font-size: 11px;
   color: var(--muted);
-  opacity: 0.6;
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--muted);
   letter-spacing: 0.02em;
-}
-
-.toast {
-  position: absolute;
-  left: 50%;
-  top: 56px;
-  transform: translateX(-50%);
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(30, 31, 35, 0.9);
-  font: 12px var(--font);
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.toast.show {
-  opacity: 1;
 }
 
 .fallback {
   position: fixed;
   left: 12px;
-  bottom: 30px;
+  bottom: 76px;
   font: 12px var(--font);
   color: var(--muted);
 }
 
 @media (max-width: 640px) {
-  .species {
-    top: 56px;
-  }
-  /* On phones the panel is a bottom sheet, so the animals stay visible while tuning */
-  .tweaks {
-    top: auto;
-    bottom: 0;
+  /* On phones the panel is a bottom sheet above the buttons, so the animals stay visible while tuning */
+  .tune {
+    bottom: 60px;
     left: 0;
     right: 0;
     width: 100%;
     max-height: 46dvh;
     border-radius: 12px 12px 0 0;
-  }
-  .toast {
-    top: 100px;
   }
 }
