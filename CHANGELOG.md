@@ -11,6 +11,12 @@ All notable changes are listed here. The format follows
 - MIT license, architecture guide, contributing guide, security policy.
 - Continuous integration: type check, formatting check and all builds on every push and pull request.
 
+### Fixed
+
+- The "Search glass blur" slider (and the blur behind the species switcher) now works in the built
+  extension in Chrome and Brave. The production CSS only contained the `-webkit-` form of
+  `backdrop-filter`, which current Chromium browsers ignore.
+
 ## [0.2.0]
 
 ### Changed

@@ -57,8 +57,9 @@ body {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: rgba(20, 21, 24, 0.7);
+  /* Only the unprefixed property: the build minifier (lightningcss) adds -webkit- itself where needed.
+     Writing both by hand made it keep just the prefixed one, which Chrome and Brave ignore. */
   backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   max-width: calc(100vw - 24px);
   overflow-x: auto;
   scrollbar-width: none;
@@ -207,8 +208,8 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   background: rgba(18, 19, 22, var(--glass-tint));
+  /* Unprefixed only, see .species above. */
   backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
 }
 
