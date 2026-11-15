@@ -11,6 +11,13 @@ All notable changes are listed here. The format follows
 - MIT license, architecture guide, contributing guide, security policy.
 - Continuous integration: type check, formatting check and all builds on every push and pull request.
 
+### Changed
+
+- New default tuning: 77 koi, smaller and dimmer tiles (cell size 9, tile size 0.77, grid opacity
+  0.02), a stronger and more opaque search glass, a less flexible tail fin, longer glides and 10
+  pellets per click. The hint is now hidden by default. Settings you have already saved are not
+  affected.
+
 ### Fixed
 
 - The "Search glass blur" slider (and the blur behind the species switcher) now works in the built
