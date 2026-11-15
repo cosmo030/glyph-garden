@@ -3,7 +3,7 @@ import { pack, packRgb, packShade } from '../render/color';
 import { glyph } from '../render/atlas';
 import { hash2, gauss, rand } from '../sim/noise';
 import { rgb } from '../sim/colors';
-import type { Band, Scene, TimeOfDay, World } from '../sim/world';
+import type { Band, Scene, World } from '../sim/world';
 
 // The Meadow scene: a night habitat of fireflies over swaying grass.
 //
@@ -35,12 +35,11 @@ const TIP = glyph("'");
 const STUB = glyph(',');
 const TAU = Math.PI * 2;
 
-/** The firefly meadow: active from the night start to the day start. */
+/** The firefly meadow: a night habitat of fireflies over swaying grass. */
 export class Meadow implements Scene {
   readonly id = 'meadow';
   readonly name = 'Meadow';
   readonly hint = 'hold to glow';
-  readonly timeOfDay: TimeOfDay = { start: 'nightStarts', end: 'dayStarts' };
   // The first letter may be lowercased when a name goes in front, so no line starts with a proper noun.
   readonly greetings: Record<Band, readonly string[]> = {
     morning: ['The grass is still wet.', 'The little lights have gone to sleep.', 'Dew on every blade.'],

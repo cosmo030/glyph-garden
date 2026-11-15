@@ -10,13 +10,12 @@ All notable changes are listed here. The format follows
 
 - MIT license, architecture guide, contributing guide, security policy.
 - Continuous integration: type check, formatting check and all builds on every push and pull request.
-- Scenes: each habitat is a scene with its own hours of the day. The koi are now the "Pond" scene.
-  The scene follows your clock by default (new Page settings: Scene follows the clock, Day starts,
-  Night starts), is re-checked every minute, and can be picked by hand with the scene name at the
-  bottom left or the left and right arrow keys. A hand pick is saved.
+- Scenes: each habitat is a scene with its own creatures, look and greeting lines. The koi are now the
+  "Pond" scene. Pick one with the scene name at the bottom left or the left and right arrow keys; the
+  pick is saved.
 - A clock above the greeting, and new calm greeting lines for the morning, afternoon, evening and
   night.
-- Night meadow scene, shown from the night start to the day start: fireflies that flash and
+- Night meadow scene: fireflies that flash and
   synchronise into waves and groups (pulse-coupled), swaying grass, twinkling stars and a deep
   blue-black sky. Press and hold lights a ring that fireflies gather around; tap to make nearby ones
   flash. New Tune group "Meadow" with sliders for all of it.

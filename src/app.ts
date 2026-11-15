@@ -3,7 +3,8 @@
  *
  * - Loads saved Tune settings and builds the shared `World` the scenes live in.
  * - Builds the page UI (clock, greeting, search box, scene name, Tune button).
- * - Picks the active scene: it follows the clock, or the one chosen by hand.
+ * - Shows the scene chosen by hand (the saved one, or the first), and lets the name button and
+ *   the arrow keys step through them.
  * - Runs the main loop: a fixed-timestep simulation (60 steps per second) and one
  *   render per animation frame. The loop stops completely while the tab is hidden.
  */
@@ -11,7 +12,7 @@ import { defaultValues, mergeValues, type Values } from './params/schema';
 import { loadSettings, saveSettingsSoon } from './params/store';
 import type { Stats } from './params/panel';
 import { GlyphRenderer } from './render/renderer';
-import { scenes, sceneById, sceneForHour } from './scenes';
+import { scenes, sceneById } from './scenes';
 import { drawEffects } from './sim/effects-draw';
 import { rgb } from './sim/colors';
 import { Effects, type Scene, type World } from './sim/world';
@@ -30,7 +31,6 @@ export async function start() {
   const greetingEl = $('.greeting');
   const hintEl = $('.hint');
   const nameBtn = $<HTMLButtonElement>('.habitat-name');
-  const modeEl = $('.habitat-mode');
   const tuneEl = $('#tune');
   const tuneBtn = $<HTMLButtonElement>('.tune-btn');
 
@@ -45,42 +45,20 @@ export async function start() {
   const stats: Stats = { fps: 0, cells: 0, animals: 0 };
 
   // ---- Scenes ----------------------------------------------------------------
-  /** The scene that should be on show now: by the clock, or the one picked by hand. */
-  function pickScene(): Scene {
-    const p = values.page;
-    if (p.autoScene) {
-      const now = new Date();
-      return sceneForHour(scenes, now.getHours() + now.getMinutes() / 60, p);
-    }
-    return sceneById(scenes, p.scene) ?? scenes[0]!;
-  }
-
-  let active: Scene = pickScene();
-
-  /** Switches to the scene `pickScene` wants, if it changed. Returns true when it switched. */
-  function refreshScene(): boolean {
-    const next = pickScene();
-    if (next === active) return false;
-    active = next;
-    active.enter(world);
-    return true;
-  }
+  let active: Scene = sceneById(scenes, values.page.scene) ?? scenes[0]!;
 
   /**
-   * Moves one step through the ring: Auto -> each scene in order -> Auto. A hand pick turns
-   * "Scene follows the clock" off and is saved; coming back round to Auto turns it on again.
+   * Moves one step through the scenes in registry order and wraps round. The pick is saved, so
+   * the next new tab opens on the same scene.
    */
   function cycleScene(direction: 1 | -1) {
     if (scenes.length < 2) return; // one scene: nothing to choose
-    const p = values.page;
-    const slots = scenes.length + 1; // slot 0 is Auto
-    const here = p.autoScene ? 0 : 1 + Math.max(0, scenes.indexOf(sceneById(scenes, p.scene) ?? scenes[0]!));
-    const next = (here + direction + slots) % slots;
-    p.autoScene = next === 0;
-    if (next > 0) p.scene = scenes[next - 1]!.id;
+    const next = scenes[(scenes.indexOf(active) + direction + scenes.length) % scenes.length]!;
+    values.page.scene = next.id;
     saveSettingsSoon(values);
-    sync();
-    panel?.refreshPanel();
+    active = next;
+    active.enter(world);
+    updatePage();
   }
 
   nameBtn.addEventListener('click', () => cycleScene(1));
@@ -103,32 +81,25 @@ export async function start() {
     document.documentElement.style.setProperty('--glass-blur', `${p.searchBlur}px`);
     document.documentElement.style.setProperty('--glass-tint', String(p.searchOpacity));
 
-    // Bottom-left: the scene name, and (when there is a choice) whether it follows the clock
+    // Bottom-left: the scene name; it is a button only when there is a choice
     const many = scenes.length > 1;
     nameBtn.textContent = `~ ${active.name.toLowerCase()} ~`;
     nameBtn.disabled = !many;
-    modeEl.textContent = many && p.autoScene ? 'auto' : '';
-    if (many)
-      nameBtn.setAttribute('aria-label', `Scene: ${active.name}${p.autoScene ? ', automatic' : ''}. Switch scene`);
+    if (many) nameBtn.setAttribute('aria-label', `Scene: ${active.name}. Switch scene`);
     else nameBtn.removeAttribute('aria-label');
     hintEl.textContent = p.showHint ? active.hint : '';
   }
 
-  /** Re-checks the clock: switches scene if the time of day calls for it, then redraws the page text. */
-  function sync() {
-    refreshScene();
-    updatePage();
-  }
   updatePage();
 
-  // Re-check once a minute, on the minute, so the clock changes when the real clock does.
+  // Redraw the page text once a minute, on the minute, so the clock changes when the real clock does.
   let tickTimer: ReturnType<typeof setTimeout> | undefined;
   function scheduleTick() {
     clearTimeout(tickTimer);
     const d = new Date();
     const untilNextMinute = 60_000 - (d.getSeconds() * 1000 + d.getMilliseconds());
     tickTimer = setTimeout(() => {
-      sync();
+      updatePage();
       scheduleTick();
     }, untilNextMinute + 50);
   }
@@ -158,7 +129,7 @@ export async function start() {
   function onChange(group: string, key: string) {
     saveSettingsSoon(values);
     if (group === 'world' && (key === 'cellSize' || key === 'maxDpr')) layout();
-    if (group === 'page') sync();
+    if (group === 'page') updatePage();
   }
 
   // ---- Renderer --------------------------------------------------------------
@@ -273,13 +244,13 @@ export async function start() {
   }
   raf = requestAnimationFrame(frame);
 
-  // Stop completely while the tab is hidden; check the clock again as soon as it is shown
+  // Stop completely while the tab is hidden; refresh the clock as soon as it is shown
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) cancelAnimationFrame(raf);
     else {
       last = performance.now();
       acc = 0;
-      sync();
+      updatePage();
       scheduleTick();
       raf = requestAnimationFrame(frame);
     }
