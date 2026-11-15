@@ -1,20 +1,9 @@
 // The clock and the greeting line at the top of the page.
 //
-// The greeting is a short, calm sentence chosen by the time of day. The bands below are
-// about wording only (when it feels like "evening"); the hours that switch scenes are
-// separate and live in the Page settings.
-
-/** Which part of the day it is, for choosing the wording. */
-export type Band = 'morning' | 'afternoon' | 'evening' | 'night';
-
-// Three lines per band. The first letter may be lowercased when a name is put in front,
-// so no line starts with a proper noun.
-const LINES: Record<Band, readonly string[]> = {
-  morning: ['The water is still.', 'A slow start is a fine start.', 'Soft light on the pond.'],
-  afternoon: ['Warm water, slow fish.', 'Take a breath. Then go on.', 'The pond is wide awake.'],
-  evening: ['The light is turning gold.', 'Easy now. The day is done.', 'Quiet is on its way.'],
-  night: ['The pond is resting.', 'Dark water, soft ripples.', 'It is late and calm.'],
-};
+// The greeting is a short, calm sentence chosen by the time of day. Each scene supplies its own
+// lines for each band. The bands below are about wording only (when it feels like "evening");
+// the hours that switch scenes are separate and live in the Page settings.
+import type { Band } from '../sim/world';
 
 const BAND_ORDER: readonly Band[] = ['morning', 'afternoon', 'evening', 'night'];
 
@@ -34,13 +23,14 @@ function dayOfYear(d: Date): number {
 }
 
 /**
- * The greeting for `date`. The line is fixed for a whole band of a day (so it doesn't change
- * under you at the minute), and a different line comes up the next day. With a name it reads
- * like "cosmo, the water is still."
+ * The greeting for `date`, picked from the active scene's `linesByBand`. The line is fixed for a
+ * whole band of a day (so it doesn't change under you at the minute), and a different line comes up
+ * the next day. With a name it reads like "cosmo, the water is still."
  */
-export function greetingFor(date: Date, name: string): string {
+export function greetingFor(date: Date, name: string, linesByBand: Record<Band, readonly string[]>): string {
   const band = bandOf(date.getHours());
-  const lines = LINES[band];
+  const lines = linesByBand[band];
+  if (lines.length === 0) return '';
   const line = lines[(dayOfYear(date) + BAND_ORDER.indexOf(band)) % lines.length]!;
   const who = name.trim();
   return who ? `${who}, ${line.charAt(0).toLowerCase()}${line.slice(1)}` : line;

@@ -45,9 +45,10 @@ src/
     colors.ts         cached hex-to-RGB parsing
   scenes/
     index.ts          the scene registry, and picking a scene by the clock
-    pond.ts           the Pond scene: koi movement, feeding, drawing
+    pond.ts           the Pond scene (day): koi movement, feeding, drawing
+    meadow.ts         the Meadow scene (night): fireflies, grass, stars
   ui/
-    greeting.ts       the clock text and the greeting lines
+    greeting.ts       the clock text, and picking a greeting from the scene's lines
 docs/                 this file
 ```
 
@@ -68,13 +69,19 @@ interface in `src/sim/world.ts`:
 - `timeOfDay`: `{ start, end }`, when the scene is shown. Each end is an hour (0 to 23) or the name of
   a Page setting (`'dayStarts'`, `'nightStarts'`), so the Pond follows the Day starts and Night starts
   sliders. A window whose end is before its start runs through midnight; equal ends mean all day.
+- `greetings`: the scene's own greeting lines for each band (morning, afternoon, evening, night). The
+  page picks one per band per day (`src/ui/greeting.ts`), and puts the name in front if there is one.
+- `background?(world)`: an optional background colour (`#rrggbb`). It is a method so it can read the
+  scene's own settings and stay tunable. The renderer uses it for the active scene, and falls back to
+  World > Background when a scene leaves it out (the Pond does).
 - `enter`, `rescale`, `step`, `draw`, `pointerDown`, `pointerUp`, `count`: the same lifecycle the
   koi always had. `pointerUp` is the end of a press that began on the canvas, for press-and-hold.
 
 **Which scene is on show** (`src/app.ts`, `src/scenes/index.ts`):
 
 - With **Page > Scene follows the clock** on (the default), `sceneForHour` returns the first scene whose
-  window contains the current time. If none does, the first registered scene stays on.
+  window contains the current time (the Pond by day, the Meadow by night). If none does, the first
+  registered scene stays on.
 - The clock is re-checked once a minute (on the minute) and whenever the tab becomes visible, so the
   scene changes without a reload.
 - Clicking the scene name, or pressing the left and right arrow keys while no text field has focus,
@@ -135,6 +142,31 @@ See the header comment in `src/scenes/pond.ts` for the full description. In shor
   makes sure each fish draws a cell only once. Eyes are drawn first, then the body, then the tail
   fin and side fins as fans of line characters (`- \ | /`) chosen by direction.
 
+## How the meadow works
+
+See the header comment in `src/scenes/meadow.ts`. In short:
+
+- **Flash cycle.** Each firefly has a phase from 0 to 1 that advances at its own rate (Flash rate, plus
+  or minus Rate spread). The flash is the first Flash length of the cycle: a quick rise, then a slower
+  fade. The rest of the cycle it is dark. It is drawn as a "•" with a halo of fainter "·" cells (Glow
+  radius, Glow strength) that shrinks as the flash fades. No tiles are drawn behind it.
+- **Synchronising** (pulse-coupled oscillators). When a firefly flashes it pushes every unlit
+  neighbour within Sync radius forward in its cycle, by up to Coupling (less with distance). A firefly
+  pushed past the end of its cycle flashes at once and pushes its own neighbours in the same step, so
+  flashes run through the meadow as waves. Neighbours fall into step over time and the meadow flashes
+  in groups; with Coupling 0 each firefly flashes on its own. The rates and the coupling are tuned
+  together: a smaller Rate spread makes the groups form faster and tighter.
+- **Movement.** Fireflies drift on a slowly turning heading, with a soft spring toward a personal
+  hover height (mostly the middle and upper sky). They wrap at the sides, and are kept above the
+  grass.
+- **Touch.** Press and hold (longer than Tap length) fades in a ring of dots at the cursor; fireflies
+  within Gather radius are pulled toward the ring and pushed around it, so they gather and circle.
+  Letting go fades the light out and they drift apart. A shorter press is a tap: every firefly within
+  Tap flash radius flashes at once, and the coupling carries the flash outward.
+- **Grass and sky.** The grass is a band of "|", "/", "\\", "'" and "," blades whose lean follows a
+  slow travelling wind wave (Grass height, density, sway; Wind speed). Stars are "." cells whose places
+  come from a hash, so none are stored. The background is the scene's own deep blue-black.
+
 ## Common changes
 
 ### Add a parameter
@@ -152,9 +184,12 @@ objects.
 
 1. Create `src/scenes/<name>.ts` with a class that implements `Scene` from `src/sim/world.ts`. Give it
    an `id`, a `name`, a `hint` and a `timeOfDay` window (for example `{ start: 19, end: 6 }` for a night
-   scene, or `{ start: 'nightStarts', end: 'dayStarts' }` to follow the Page sliders). Use `pond.ts` as a
-   template: typed arrays for state, no allocation in `step` or `draw`.
-2. Add a parameter group for it in `schema.ts`.
+   scene, or `{ start: 'nightStarts', end: 'dayStarts' }` to follow the Page sliders), and `greetings`:
+   a few calm lines for each of morning, afternoon, evening and night. If the scene wants its own
+   background, add `background(world)` returning a colour from its settings. Use `pond.ts` (or
+   `meadow.ts`) as a template: typed arrays for state, no allocation in `step` or `draw`.
+2. Add a parameter group for it in `schema.ts` (every tunable number and colour, including its
+   background).
 3. In `src/scenes/index.ts`, import it and add one entry to the `scenes` array. That is all: the name
    button, the arrow keys and the clock all pick it up. The array order is the cycling order, and when
    two windows overlap the earlier one wins.

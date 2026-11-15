@@ -99,7 +99,7 @@ export async function start() {
     const p = values.page;
     const now = new Date();
     clockEl.textContent = clockText(now);
-    greetingEl.textContent = greetingFor(now, p.name);
+    greetingEl.textContent = greetingFor(now, p.name, active.greetings);
     document.documentElement.style.setProperty('--glass-blur', `${p.searchBlur}px`);
     document.documentElement.style.setProperty('--glass-tint', String(p.searchOpacity));
 
@@ -254,7 +254,7 @@ export async function start() {
     drawEffects(renderer, world);
     const w = values.world;
     renderer.draw({
-      background: rgb(w.background),
+      background: rgb(active.background?.(world) ?? w.background),
       gridOpacity: w.gridOpacity,
       gridEvery: w.gridEvery,
       tileFill: w.tileFill,

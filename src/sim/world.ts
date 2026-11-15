@@ -13,6 +13,9 @@ export type World = {
   effects: Effects;
 };
 
+/** Which part of the day it is, for choosing the wording of a greeting. */
+export type Band = 'morning' | 'afternoon' | 'evening' | 'night';
+
 /**
  * An hour of the day: a number from 0 to 23, or the name of the Page setting that holds one
  * (so a scene can follow "Day starts" or "Night starts" instead of a fixed time).
@@ -38,6 +41,13 @@ export interface Scene {
   readonly hint: string;
   /** When this scene is shown while Page > "Scene follows the clock" is on. */
   readonly timeOfDay: TimeOfDay;
+  /** The greeting lines for each part of the day. One is picked per day and band. Calm and short. */
+  readonly greetings: Record<Band, readonly string[]>;
+  /**
+   * Background colour (#rrggbb) for this scene. Read from the scene's own settings so it can be tuned.
+   * Leave it out to use World > Background.
+   */
+  background?(world: World): string;
   /** Called when the scene becomes active: (re)spawn its creatures. */
   enter(world: World): void;
   /** Called when the grid size changes, with the scale factor applied to positions. */
