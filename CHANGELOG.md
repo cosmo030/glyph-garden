@@ -17,8 +17,10 @@ All notable changes are listed here. The format follows
   night.
 - Night meadow scene: fireflies that flash and
   synchronise into waves and groups (pulse-coupled), swaying grass, twinkling stars and a deep
-  blue-black sky. Press and hold lights a ring that fireflies gather around; tap to make nearby ones
-  flash. New Tune group "Meadow" with sliders for all of it.
+  blue-black sky. Each flash glows as a round ramp of characters (. : + *) on faint tiles, with a
+  solid bright core. Press and hold lights a pulsing ring with a faint tinted fill that fireflies
+  gather around; tap to make nearby ones flash. The grass has two greens and lighter tips that lean
+  with the wind. New Tune group "Meadow" with sliders for all of it.
 - Each scene can set its own background colour (the Meadow does) and its own greeting lines. The Pond
   keeps its colour and its lines, and the Meadow has its own calm lines for every part of the day.
 
