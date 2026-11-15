@@ -17,6 +17,8 @@ All notable changes are listed here. The format follows
   0.02), a stronger and more opaque search glass, a less flexible tail fin, longer glides and 10
   pellets per click. The hint is now hidden by default. Settings you have already saved are not
   affected.
+- The "Search glass blur" slider now goes from 0 to 10 px (was 0 to 40) and defaults to 10. A saved
+  value above 10 is clamped to 10.
 
 ### Fixed
 
