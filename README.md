@@ -59,6 +59,8 @@ Open a new tab.
 | `npm run build`         | Builds the Chrome extension into `.output/chrome-mv3`        |
 | `npm run build:firefox` | Builds the Firefox add-on into `.output/firefox-mv2`         |
 | `npm run zip`           | Creates store-ready zips for both browsers                   |
+| `npm run icons`         | Redraws the icon PNGs from `art/icon.svg`                    |
+| `npm run store:assets`  | Retakes the store screenshots and promo images               |
 | `npm run check`         | Type-checks and checks formatting (what CI runs)             |
 | `npm run format`        | Formats all files with Prettier                              |
 
@@ -67,7 +69,8 @@ How the code is organised, and how to add a parameter or a new animal:
 
 ## Privacy
 
-Glyph Garden collects nothing and sends nothing anywhere.
+Glyph Garden collects nothing and sends nothing anywhere. The full policy is in
+[PRIVACY.md](PRIVACY.md).
 
 - It asks for two permissions: `storage`, to save your Tune settings on your device, and `search`, so the
   search box uses the search engine you already chose in your browser.

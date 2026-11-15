@@ -6,8 +6,13 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-15
+
 ### Added
 
+- An icon: a firefly glow drawn as character tiles on a dark rounded square (16, 32, 48 and 128 px).
+- Store listing material in `store/`, a privacy policy (`PRIVACY.md`) and scripts that regenerate the
+  icon, screenshots and promo images.
 - MIT license, architecture guide, contributing guide, security policy.
 - Continuous integration: type check, formatting check and all builds on every push and pull request.
 - Scenes: each habitat is a scene with its own creatures, look and greeting lines. The koi are now the
@@ -26,6 +31,10 @@ All notable changes are listed here. The format follows
 
 ### Changed
 
+- The extension description is shorter and describes both scenes.
+- Firefox: the manifest now declares that the add-on collects no data
+  (`data_collection_permissions: { required: ["none"] }`), as Mozilla now asks of new add-ons, and the
+  minimum Firefox version is 140, the first version that understands it.
 - New default tuning: 77 koi, smaller and dimmer tiles (cell size 9, tile size 0.77, grid opacity
   0.02), a stronger and more opaque search glass, a less flexible tail fin, longer glides and 10
   pellets per click. The hint is now hidden by default. Settings you have already saved are not

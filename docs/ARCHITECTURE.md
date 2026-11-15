@@ -49,8 +49,22 @@ src/
     meadow.ts         the Meadow scene (night): fireflies, grass, stars
   ui/
     greeting.ts       the clock text, and picking a greeting from the scene's lines
+public/icon/          the extension icon PNGs (16, 32, 48, 128), made from art/icon.svg
+art/                  icon.svg, the source of the icon
+scripts/              make-icons.mjs and store-assets.mjs (Node only, driving a local Chromium browser)
+store/                store listing text, screenshots and promo images (see below)
 docs/                 this file
 ```
+
+## Store release files
+
+`npm run icons` redraws `public/icon/*.png` from `art/icon.svg`; WXT finds the PNGs by name and adds
+them to both manifests. `npm run store:assets` builds the web preview and takes the store
+screenshots (1280x800) and promo images into `store/`, so they can be redone after a visual change.
+Both scripts only talk to a browser on this machine. `store/listing.md` and
+`store/amo-reviewer-notes.md` hold the text for the two store forms, and `PRIVACY.md` is the privacy
+policy both stores link to. `npm run zip` makes the Chrome zip, the Firefox zip and the Firefox
+sources zip in `.output/`; `wxt.config.ts` keeps secrets and generated images out of the sources zip.
 
 ## Units and coordinates
 
