@@ -18,6 +18,12 @@ All notable changes are listed here. The format follows
   pellets per click. The hint is now hidden by default. Settings you have already saved are not
   affected.
 
+### Fixed
+
+- The "Search glass blur" slider (and the blur behind the species switcher) now works in the built
+  extension in Chrome and Brave. The production CSS only contained the `-webkit-` form of
+  `backdrop-filter`, which current Chromium browsers ignore.
+
 ## [0.2.0]
 
 ### Changed
