@@ -36,7 +36,7 @@ export const schema = {
       name: text('Your name', ''),
       searchBlur: num('Search glass blur', 0, 40, 1, 40),
       searchOpacity: num('Search glass tint', 0, 1, 0.01, 0.85),
-      showHint: bool('Show hint', true),
+      showHint: bool('Show hint', false),
     },
   },
   world: {
