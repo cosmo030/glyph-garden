@@ -187,6 +187,12 @@ export const schema = {
       starDensity: num('Stars (per 1000 sky cells)', 0, 120, 0.5, 48),
       twinkle: num('Twinkle', 0, 1, 0.01, 0.35),
       starDrift: num('Star drift (cells per minute)', 0, 5, 0.05, 0.5),
+      // The moon, in its real phase for the date (Moon size 0 hides it)
+      moonSize: num('Moon size (cells)', 0, 12, 0.1, 3.6),
+      moonX: num('Moon across (share of width)', 0, 1, 0.01, 0.78),
+      moonY: num('Moon height (share of sky)', 0.05, 0.9, 0.01, 0.24),
+      moonHalo: num('Moon halo', 0, 2, 0.01, 1),
+      colMoon: color('Moon colour', '#ece9d6'),
       milkyWay: num('Milky Way', 0, 0.3, 0.005, 0.055),
       milkyStars: num('Milky Way stars', 0, 1, 0.01, 0.7),
       colMilky: color('Milky Way colour', '#a9b8e6'),

@@ -56,6 +56,12 @@ const STAR_BRIGHT = glyph('+');
 const STAR_MID_FROM = 0.78; // a star's hash above this makes it a mid star, above the next a bright one
 const STAR_BRIGHT_FROM = 0.95;
 const MAX_STARS = 1500; // a cap for very large screens at a high density
+// The moon's surface, dim to bright, so the lit side shows its darker seas and brighter highlands
+const MOON_RAMP = [glyph('·'), glyph(':'), glyph('%'), glyph('#')];
+const MOON_DARK = glyph('·'); // the faint outline of the unlit side (earthshine)
+// The moon's phase: the average time from one new moon to the next, and one known new moon
+const SYNODIC_MS = 29.530588853 * 86_400_000;
+const NEW_MOON_MS = Date.UTC(2000, 0, 6, 18, 14);
 const MILKY_FAINT = glyph('·'); // the Milky Way's own dense, dim stars
 const MILKY_DOT = glyph('.');
 const SHOOT_CAP = 3; // shooting stars on screen at once
@@ -145,6 +151,11 @@ export class Meadow implements Scene {
   private sLife = new Float32Array(SHOOT_CAP);
   private sDist = new Float32Array(SHOOT_CAP);
   private nextShoot = 0; // world time of the next shooting star
+
+  // The moon for this frame: centre and radius in cells (radius 0 when there is none)
+  private moonX = 0;
+  private moonY = 0;
+  private moonR = 0;
 
   // The Milky Way, worked out into a list of cells and cached: its noise is too costly for every
   // frame, and it only changes when the sky drifts a whole cell or the grid or settings change.
@@ -500,8 +511,10 @@ export class Meadow implements Scene {
   draw(r: GlyphRenderer, world: World) {
     this.updateLand(world);
     this.fitMaps(world);
+    this.placeMoon(world);
     this.drawMilkyWay(r, world);
     this.drawStars(r, world);
+    this.drawMoon(r, world);
     this.drawShootingStars(r, world);
     this.lightFireflies(world);
     this.drawField(r, world);
@@ -628,6 +641,92 @@ export class Meadow implements Scene {
     this.tn = 0;
   }
 
+  /** Where the moon is this frame (Moon position settings), or no moon when Moon size is 0. */
+  private placeMoon(world: World) {
+    const m = world.params.meadow;
+    this.moonR = m.moonSize;
+    this.moonX = m.moonX * world.cols;
+    this.moonY = m.moonY * (this.horizon(world) - m.farHills);
+  }
+
+  /** True when the cell at (x, y) is hidden by the moon's disc. */
+  private behindMoon(x: number, y: number) {
+    if (this.moonR <= 0) return false;
+    const dx = x + 0.5 - this.moonX;
+    const dy = y + 0.5 - this.moonY;
+    const r = this.moonR + 0.6;
+    return dx * dx + dy * dy < r * r;
+  }
+
+  /**
+   * The moon in its real phase, worked out from the date: the phase p runs from 0 (new) through 0.5
+   * (full) back to 1, over the average lunar month counted from a known new moon. The lit part of
+   * the disc follows the terminator: at height v on the disc (from -1 to 1) the half-width is
+   * w = sqrt(1 - v^2), and with k = cos(2 pi p) a waxing moon is lit where u > k w and a waning one
+   * where u < -k w (u across the disc, -1 to 1). So a waxing moon is lit on the right and a waning one
+   * on the left, as seen from the northern hemisphere. The lit side is a ramp of characters on bright
+   * tiles with smooth noise for its darker seas, the terminator is soft, the dark side keeps a faint
+   * outline (earthshine), and a halo grows with how much of it is lit.
+   */
+  private drawMoon(r: GlyphRenderer, world: World) {
+    const R = this.moonR;
+    if (R <= 0) return;
+    const m = world.params.meadow;
+    const col = rgb(m.colMoon);
+    const p = ((((world.clock.epochMs - NEW_MOON_MS) / SYNODIC_MS) % 1) + 1) % 1;
+    const k = Math.cos(TAU * p);
+    const waxing = p < 0.5;
+    const lit = (1 - k) / 2; // the share of the disc that is lit
+    const day = 0.35 + 0.65 * this.starVis; // paler by day
+    const cx = this.moonX;
+    const cy = this.moonY;
+    const haloR = R * (1 + 1.1 * m.moonHalo * (0.4 + 0.6 * lit));
+    const reach = Math.ceil(haloR) + 1;
+    const x0 = Math.floor(cx);
+    const y0 = Math.floor(cy);
+    for (let oy = -reach; oy <= reach; oy++) {
+      for (let ox = -reach; ox <= reach; ox++) {
+        const gx = x0 + ox;
+        const gy = y0 + oy;
+        if (gy < 0) continue;
+        const dx = gx + 0.5 - cx;
+        const dy = gy + 0.5 - cy;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d >= haloR) continue;
+        if (d > R) {
+          // The halo: a soft ring of faint tiles, stronger the fuller the moon
+          const h = 1 - (d - R) / (haloR - R);
+          const a = m.moonHalo * 0.12 * lit * Math.pow(h, 2.5) * day;
+          if (a > 0.004) r.push(gx, gy, packRgb(col, a), 0, 0);
+          continue;
+        }
+        // On the disc: how lit this cell is, with a soft terminator about a fifth of the radius wide
+        const u = dx / R;
+        const v = Math.min(1, Math.abs(dy / R));
+        const w = Math.sqrt(1 - v * v);
+        const edge = waxing ? u - k * w : -k * w - u;
+        const light = Math.max(0, Math.min(1, edge / 0.2 + 0.5));
+        const rim = Math.min(1, (R - d) / 0.6 + 0.35); // the outermost cells a little fainter
+        if (light < 0.05) {
+          r.push(gx, gy, packRgb(col, 0.05 * rim * day), packRgb(col, 0.1 * rim * day), MOON_DARK);
+          continue;
+        }
+        // Seas: smooth noise over the disc (fixed to the moon, so they don't move)
+        const sea = noise2(u * 2.2 + 5, v * 2.2 + (dy < 0 ? 0 : 3), SEED + 8);
+        const b = light * rim * (0.62 + 0.38 * sea);
+        let step = 0;
+        while (step < 3 && b >= 0.3 + step * 0.2) step++;
+        r.push(
+          gx,
+          gy,
+          packRgb(col, 0.5 * b * day),
+          packShade(col, 0.15 * b, Math.min(1, (0.35 + 0.65 * b) * day)),
+          MOON_RAMP[step],
+        );
+      }
+    }
+  }
+
   /**
    * The Milky Way: a soft band of haze across the sky with many dim stars of its own, drawn behind the
    * other stars. It runs from near the horizon on the left to high up on the right, in sky coordinates
@@ -744,6 +843,7 @@ export class Meadow implements Scene {
       const u = Math.pow(hash2(i, 1, SEED), 1.4);
       const y = Math.floor(u * skyRows);
       if (y >= this.skyFloor(world, x + 0.5) - 1) continue; // behind the hills
+      if (this.behindMoon(x, y)) continue;
       const rate = 0.2 + hash2(i, 2, SEED) * 0.6; // slow: a calm sky, not a flickering one
       const tw = 1 - m.twinkle * (0.5 + 0.5 * Math.sin(world.time * rate + hash2(i, 3, SEED) * TAU));
       const haze = (1 - 0.55 * u) * vis; // the lowest stars are a little dimmer; all fade by day
