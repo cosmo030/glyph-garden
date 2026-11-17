@@ -257,6 +257,55 @@ body {
   letter-spacing: 0.02em;
 }
 
+/* Website demo (src/ui/demo.ts): no search box, and a thin bar at the top saying where to get it */
+.demo .search {
+  display: none;
+}
+
+.demo-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 14px;
+  font: 12px var(--mono);
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  /* Koi swim under the bar; a dark halo keeps the links readable over bright scales */
+  text-shadow:
+    0 0 3px rgba(0, 0, 0, 0.95),
+    0 1px 10px rgba(0, 0, 0, 0.8);
+}
+
+.demo-bar p {
+  margin: 0;
+}
+
+.demo-name {
+  color: var(--text);
+}
+
+.demo-tagline::before {
+  content: ' · ';
+}
+
+.demo-bar a {
+  pointer-events: auto;
+  color: var(--text);
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+
+.demo-bar a:hover,
+.demo-bar a:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
 .fallback {
   position: fixed;
   left: 12px;
@@ -274,5 +323,10 @@ body {
     width: 100%;
     max-height: 46dvh;
     border-radius: 12px 12px 0 0;
+  }
+
+  /* The tagline doesn't fit next to the links on a phone; the name and the links are what matter */
+  .demo-tagline {
+    display: none;
   }
 }

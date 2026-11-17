@@ -43,7 +43,7 @@ async function load(w, h, iso) {
   if (clockScript) await page.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: clockScript });
   ({ identifier: clockScript } = await page.send('Page.addScriptToEvaluateOnNewDocument', { source: fixClock(iso) }));
   await page.resize(w, h);
-  await page.goto(`${site.origin}/index.html?debug`);
+  await page.goto(`${site.origin}/index.html?debug&newtab`);
   await page.sleep(2500);
 }
 const save = async (path, png) => {

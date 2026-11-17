@@ -23,6 +23,7 @@ How Glyph Garden is put together, and where to make common changes.
 - **Renderer** (`src/render/*`) draws a grid of character cells with WebGL2.
 - **Page UI** (`entrypoints/newtab/*`, `src/app.ts`) is plain HTML and CSS on top of the canvas:
   clock, greeting, search box, the scene name (bottom left) and the Tune button (bottom right).
+  Served as a website, the same page becomes the demo: see [Website demo](#website-demo).
 
 ## Folder layout
 
@@ -49,6 +50,7 @@ src/
     meadow.ts         the Meadow scene (night): fireflies, grass, stars
   ui/
     greeting.ts       the clock text, and picking a greeting from the scene's lines
+    demo.ts           the website demo: hides the search box, adds the top bar with store links
 public/icon/          the extension icon PNGs (16, 32, 48, 128), made from art/icon.svg
 art/                  icon.svg, the source of the icon
 scripts/              make-icons.mjs and store-assets.mjs (Node only, driving a local Chromium browser)
@@ -65,6 +67,21 @@ Both scripts only talk to a browser on this machine. `store/listing.md` and
 `store/amo-reviewer-notes.md` hold the text for the two store forms, and `PRIVACY.md` is the privacy
 policy both stores link to. `npm run zip` makes the Chrome zip, the Firefox zip and the Firefox
 sources zip in `.output/`; `wxt.config.ts` keeps secrets and generated images out of the sources zip.
+
+## Website demo
+
+`npm run preview:build` builds the new-tab page as a plain website into `dist-preview/`. Vercel
+deploys that to [glyph.cosmo030.com](https://glyph.cosmo030.com) on every push to `main`
+(`vercel.json` holds the build command and output folder).
+
+When the page is not running inside the extension (no `runtime.id`), `src/ui/demo.ts` turns it into
+the demo: the search box is hidden, the hint is on by default, and a thin bar at the top links to the
+stores, the source and cosmo030.com. The store links live in `GET_LINKS` in that file. The website's
+title, description and favicon are added by a small plugin in `vite.preview.config.ts`, so the
+extension keeps "New Tab" as its title.
+
+Add `?newtab` to the URL to see the plain new-tab look on the website. `npm run store:assets` does
+this, so the store screenshots show the page as the extension does.
 
 ## Units and coordinates
 

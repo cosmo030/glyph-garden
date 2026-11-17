@@ -2,7 +2,8 @@
  * App entry point: wires the page together.
  *
  * - Loads saved Tune settings and builds the shared `World` the scenes live in.
- * - Builds the page UI (clock, greeting, search box, scene name, Tune button).
+ * - Builds the page UI (clock, greeting, search box, scene name, Tune button). Served as a plain
+ *   website, the page becomes the demo instead (see `ui/demo.ts`).
  * - Shows the scene chosen by hand (the saved one, or the first), and lets the name button and
  *   the arrow keys step through them.
  * - Runs the main loop: a fixed-timestep simulation (60 steps per second) and one
@@ -16,14 +17,19 @@ import { scenes, sceneById } from './scenes';
 import { drawEffects } from './sim/effects-draw';
 import { rgb } from './sim/colors';
 import { Effects, type Scene, type World } from './sim/world';
+import { isDemo, setUpDemo } from './ui/demo';
 import { clockText, greetingFor } from './ui/greeting';
 
 const STEP = 1 / 60; // simulation runs at a fixed 60 steps per second
 
 /** Boots the new-tab page. Called once from `entrypoints/newtab/main.ts`. */
 export async function start() {
+  const demo = isDemo();
   const values: Values = defaultValues();
+  // Website visitors haven't read the store page, so show them what to click unless they turned it off.
+  if (demo) values.page.showHint = true;
   mergeValues(values, await loadSettings());
+  if (demo) setUpDemo(document.querySelector('.ui') as HTMLElement);
 
   const canvas = document.getElementById('stage') as HTMLCanvasElement;
   const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
