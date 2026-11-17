@@ -31,6 +31,8 @@ All notable changes are listed here. The format follows
   default; turn it off to use the colour sliders).
 - The Meadow's stars drift very slowly across the sky, the way the night sky turns, and stand in the
   same place at the same time of day (Star drift).
+- A faint Milky Way across the Meadow's sky: a clumpy band of haze and tiny stars with a darker dust
+  lane, drifting with the stars (Milky Way, Milky Way stars and colour).
 - Add `?at=2026-11-20T05:30` to the URL to set the page's clock to that moment, for checking the
   time-of-day looks.
 - Stray fireflies: now and then one drifts up out of the field into the low sky and fades away, and a

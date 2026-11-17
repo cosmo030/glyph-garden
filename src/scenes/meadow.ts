@@ -56,6 +56,8 @@ const STAR_BRIGHT = glyph('+');
 const STAR_MID_FROM = 0.78; // a star's hash above this makes it a mid star, above the next a bright one
 const STAR_BRIGHT_FROM = 0.95;
 const MAX_STARS = 1500; // a cap for very large screens at a high density
+const MILKY_FAINT = glyph('·'); // the Milky Way's own dense, dim stars
+const MILKY_DOT = glyph('.');
 const SHOOT_CAP = 3; // shooting stars on screen at once
 const SHOOT_HEAD = glyph('*');
 const SHOOT_STREAK = glyph('-'); // the bright part of the trail, right behind the head
@@ -143,6 +145,15 @@ export class Meadow implements Scene {
   private sLife = new Float32Array(SHOOT_CAP);
   private sDist = new Float32Array(SHOOT_CAP);
   private nextShoot = 0; // world time of the next shooting star
+
+  // The Milky Way, worked out into a list of cells and cached: its noise is too costly for every
+  // frame, and it only changes when the sky drifts a whole cell or the grid or settings change.
+  private milkyN = 0;
+  private milkyX = new Int16Array(0);
+  private milkyY = new Int16Array(0);
+  private milkyHaze = new Float32Array(0); // tile alpha of the haze, before star visibility
+  private milkyStar = new Float32Array(0); // alpha of the cell's own faint star, 0 for none
+  private milkyKey = [NaN, NaN, NaN, NaN, NaN, NaN, NaN]; // what the cache was made for
 
   // The colours of the moment when the sky follows the clock, and how visible the stars are (0 to 1)
   private skyNow = makeSkyColors();
@@ -489,6 +500,7 @@ export class Meadow implements Scene {
   draw(r: GlyphRenderer, world: World) {
     this.updateLand(world);
     this.fitMaps(world);
+    this.drawMilkyWay(r, world);
     this.drawStars(r, world);
     this.drawShootingStars(r, world);
     this.lightFireflies(world);
@@ -614,6 +626,97 @@ export class Meadow implements Scene {
       }
     }
     this.tn = 0;
+  }
+
+  /**
+   * The Milky Way: a soft band of haze across the sky with many dim stars of its own, drawn behind the
+   * other stars. It runs from near the horizon on the left to high up on the right, in sky coordinates
+   * that drift with the stars and wrap round the screen; it fades out toward both ends (by
+   * sin(pi * u)^0.6, u going 0 to 1 across the screen in sky coordinates), so the wrap never shows.
+   * Across the band the haze falls off like a Gaussian, smooth noise makes it clumpy, and a darker
+   * lane of dust runs along it, just off its middle.
+   */
+  private drawMilkyWay(r: GlyphRenderer, world: World) {
+    const m = world.params.meadow;
+    const vis = this.starVis;
+    if (vis < 0.01 || (m.milkyWay <= 0 && m.milkyStars <= 0)) return;
+    this.fitMilkyWay(world);
+    const col = rgb(m.colMilky);
+    for (let k = 0; k < this.milkyN; k++) {
+      const haze = this.milkyHaze[k]! * vis;
+      const star = this.milkyStar[k]! * vis;
+      if (star > 0)
+        r.push(
+          this.milkyX[k]!,
+          this.milkyY[k]!,
+          packRgb(col, haze),
+          packRgb(col, star),
+          k & 1 ? MILKY_FAINT : MILKY_DOT,
+        );
+      else r.push(this.milkyX[k]!, this.milkyY[k]!, packRgb(col, haze), 0, 0);
+    }
+  }
+
+  /** Rebuilds the cached Milky Way cells when the sky has drifted a whole cell or anything it depends on changed. */
+  private fitMilkyWay(world: World) {
+    const m = world.params.meadow;
+    const cols = Math.ceil(world.cols);
+    const shiftCells = Math.floor(m.starDrift * world.clock.minutes);
+    const key = this.milkyKey;
+    if (
+      key[0] === cols &&
+      key[1] === world.rows &&
+      key[2] === shiftCells &&
+      key[3] === m.milkyWay &&
+      key[4] === m.milkyStars &&
+      key[5] === m.horizon &&
+      key[6] === m.farHills + m.nearHills * 100
+    )
+      return;
+    key[0] = cols;
+    key[1] = world.rows;
+    key[2] = shiftCells;
+    key[3] = m.milkyWay;
+    key[4] = m.milkyStars;
+    key[5] = m.horizon;
+    key[6] = m.farHills + m.nearHills * 100;
+
+    const skyRows = Math.max(1, this.horizon(world) - m.farHills * 0.55 - 1);
+    // Enough room for the widest band; grows only when the grid does (this runs rarely, not per frame)
+    const room = Math.ceil(cols * skyRows * 0.6);
+    if (this.milkyX.length < room) {
+      this.milkyX = new Int16Array(room);
+      this.milkyY = new Int16Array(room);
+      this.milkyHaze = new Float32Array(room);
+      this.milkyStar = new Float32Array(room);
+    }
+    let n = 0;
+    for (let x = 0; x < cols; x++) {
+      // Sky coordinate of this column: the band moves with the stars and wraps every screen width
+      const sx = (((x - shiftCells) % cols) + cols) % cols;
+      const u = sx / cols;
+      const ends = Math.pow(Math.sin(Math.PI * u), 0.6); // fades out toward both ends
+      if (ends < 0.03) continue;
+      const centre = skyRows * (0.95 - 0.85 * u); // low on the left, high on the right
+      const width = skyRows * (0.09 + 0.06 * Math.sin(Math.PI * u)); // a little wider in the middle
+      const y0 = Math.max(0, Math.floor(centre - 2.2 * width));
+      const y1 = Math.min(Math.floor(this.skyFloor(world, x + 0.5)) - 1, Math.ceil(centre + 2.2 * width));
+      for (let y = y0; y <= y1 && n < room; y++) {
+        const d = (y + 0.5 - centre) / width;
+        const clump = noise2(sx * 0.11, y * 0.22, SEED + 3);
+        const lane = 1 - 0.6 * Math.exp(-((d + 0.15) * (d + 0.15)) / 0.05) * noise2(sx * 0.05, 7.5, SEED + 4);
+        const I = ends * Math.exp(-d * d) * (0.45 + 0.55 * clump) * lane;
+        if (I < 0.05) continue;
+        this.milkyX[n] = x;
+        this.milkyY[n] = y;
+        this.milkyHaze[n] = m.milkyWay * I;
+        // Its own dim stars, most where the band is brightest (places from a hash in sky coordinates)
+        this.milkyStar[n] =
+          hash2(sx, y, SEED + 5) < m.milkyStars * I ? (0.3 + 0.45 * hash2(sx, y, SEED + 6)) * Math.sqrt(I) : 0;
+        n++;
+      }
+    }
+    this.milkyN = n;
   }
 
   /**
