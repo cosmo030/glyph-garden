@@ -15,8 +15,9 @@ export default defineConfig({
 });
 
 /**
- * Gives the website a real title, a description for link previews and a favicon. The extension
- * keeps "New Tab" as its title, so this is done here rather than in index.html.
+ * Gives the website a real title, a description for link previews and a favicon, and takes
+ * `autofocus` off the search box. The extension keeps both as they are, so this is done here rather
+ * than in index.html.
  */
 function websiteHead(): Plugin {
   const description =
@@ -24,14 +25,19 @@ function websiteHead(): Plugin {
   return {
     name: 'glyph-garden-website-head',
     transformIndexHtml: (html) =>
-      html.replace(
-        '<title>New Tab</title>',
-        [
-          '<title>Glyph Garden</title>',
-          `<meta name="description" content="${description}" />`,
-          '<link rel="icon" type="image/png" sizes="32x32" href="./icon/32.png" />',
-          '<link rel="apple-touch-icon" href="./icon/128.png" />',
-        ].join('\n    '),
-      ),
+      html
+        // On a new tab the cursor belongs in the search box. On the website a focused box would take
+        // the arrow keys, which switch scenes, before the visitor has clicked anything. Done at build
+        // time because the browser applies autofocus before any script could undo it.
+        .replace(/\s+autofocus(?=[\s>])/, '')
+        .replace(
+          '<title>New Tab</title>',
+          [
+            '<title>Glyph Garden</title>',
+            `<meta name="description" content="${description}" />`,
+            '<link rel="icon" type="image/png" sizes="32x32" href="./icon/32.png" />',
+            '<link rel="apple-touch-icon" href="./icon/128.png" />',
+          ].join('\n    '),
+        ),
   };
 }

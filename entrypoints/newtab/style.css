@@ -257,11 +257,7 @@ body {
   letter-spacing: 0.02em;
 }
 
-/* Website demo (src/ui/demo.ts): no search box, and a thin bar at the top saying where to get it */
-.demo .search {
-  display: none;
-}
-
+/* Website demo (src/ui/demo.ts): a thin bar at the top saying where to get it */
 .demo-bar {
   position: absolute;
   top: 0;
