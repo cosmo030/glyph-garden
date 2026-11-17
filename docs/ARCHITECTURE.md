@@ -240,6 +240,15 @@ See the header comment in `src/scenes/meadow.ts`. In short:
   horizon, and they twinkle slowly (Twinkle). The sky drifts from left to right by Star drift cells
   per minute, wrapping round, the way the night sky turns; the shift is taken from the time of day, so
   the stars stand in the same place at the same hour.
+- **Moon.** Drawn in its real phase for the date: p runs from 0 (new) through 0.5 (full) back to 1
+  over the average lunar month (29.53 days), counted from a known new moon (6 January 2000, 18:14
+  UTC); that is accurate to within about a day. On the disc, at height v the half-width is
+  w = sqrt(1 - v^2) and with k = cos(2 pi p) a waxing moon is lit where u > k w, a waning one where
+  u < -k w. So it is lit on the right while waxing and on the left while waning, as seen from the
+  northern hemisphere. The lit side is a ramp of characters on bright tiles, with smooth noise for
+  darker seas and a soft terminator; the dark side keeps a faint outline (earthshine); a halo grows
+  with how much is lit (Moon halo). It is paler by day. Stars behind the disc are left out. Moon size,
+  Moon across and Moon height place it; size 0 hides it. Use `?at=` to see other phases.
 - **Milky Way.** A soft band behind the stars, from near the horizon on the left to high on the
   right, in sky coordinates that drift and wrap with the stars. It fades out toward both ends
   (sin(pi u)^0.6 across the screen), so the wrap never shows. Across the band the haze falls off like

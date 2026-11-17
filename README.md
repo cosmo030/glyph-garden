@@ -20,7 +20,9 @@ Works in Chrome, Brave, Edge and other Chromium browsers, and in Firefox.
   name at the bottom left, or press the left and right arrow keys, to step through the Pond and the
   Meadow. The scene you pick is remembered.
 - **Night meadow**: a clear, starry sky over rolling hills and a field that runs to the horizon, with
-  gusts of wind rolling through the grass and now and then a shooting star. Small fireflies drift
+  gusts of wind rolling through the grass and now and then a shooting star. The sky follows the
+  clock (dusk, deep night, a warm line before dawn), the stars and a faint Milky Way drift slowly, and
+  the moon shows its real phase. Small fireflies drift
   over the field, tiny in the distance and larger up close. Each one flashes on its own
   cycle, and neighbours nudge each other, so over half a minute or so they fall into flashing waves
   and groups. Tap near them to make the nearby ones flash.

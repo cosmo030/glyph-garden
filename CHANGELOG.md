@@ -31,6 +31,9 @@ All notable changes are listed here. The format follows
   default; turn it off to use the colour sliders).
 - The Meadow's stars drift very slowly across the sky, the way the night sky turns, and stand in the
   same place at the same time of day (Star drift).
+- The moon in the Meadow's sky, in its real phase for the date (worked out on the device, no network):
+  a crescent, half or full disc of characters with darker seas, a faint outline of its dark side and
+  a soft halo that grows as it fills (Moon size, position, halo and colour).
 - A faint Milky Way across the Meadow's sky: a clumpy band of haze and tiny stars with a darker dust
   lane, drifting with the stars (Milky Way, Milky Way stars and colour).
 - Add `?at=2026-11-20T05:30` to the URL to set the page's clock to that moment, for checking the
