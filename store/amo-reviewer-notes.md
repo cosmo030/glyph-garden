@@ -50,5 +50,5 @@ glyph.cosmo030.com); inside the add-on the search API is always there, so it nev
 ## Testing
 
 Open a new tab. Click the scene name (bottom left) or press the left and right arrow keys to switch
-between the Pond and the Meadow; click on the Pond to drop food; press and hold on the Meadow to light
-a ring. The sliders button (bottom right) opens the Tune panel.
+between the Pond and the Meadow; click on the Pond to drop food; tap near the fireflies on the Meadow to make
+them flash. The sliders button (bottom right) opens the Tune panel.

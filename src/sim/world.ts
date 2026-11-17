@@ -44,7 +44,7 @@ export interface Scene {
   draw(r: GlyphRenderer, world: World): void;
   /** Click or tap at grid position (x, y), in cells. */
   pointerDown(x: number, y: number, world: World): void;
-  /** The press that began on the canvas ended, at grid position (x, y). Lets a scene react to press-and-hold. */
+  /** The press that began on the canvas ended, at grid position (x, y). Lets a scene tell a tap from a long press. */
   pointerUp(x: number, y: number, world: World): void;
   /** Number of creatures currently alive (shown in Tune > Performance). */
   count(): number;

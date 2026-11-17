@@ -151,15 +151,7 @@ export const schema = {
       // Synchronising: when a firefly flashes, flashing neighbours' cycles jump ahead by up to `coupling`
       coupling: num('Coupling', 0, 0.4, 0.005, 0.05),
       syncRadius: num('Sync radius (cells)', 2, 60, 0.5, 12),
-      // Touch: press and hold gathers fireflies around a light, a short tap makes them flash
-      gatherRadius: num('Gather radius (cells)', 5, 80, 0.5, 40),
-      gatherPull: num('Gather pull', 0, 10, 0.05, 4),
-      orbitSpeed: num('Orbit speed', 0, 10, 0.05, 3),
-      lightRadius: num('Light radius (cells)', 2, 20, 0.5, 6),
-      lightPulse: num('Light pulse', 0, 0.5, 0.01, 0.12),
-      lightPulseSpeed: num('Light pulse speed (Hz)', 0, 3, 0.05, 0.8),
-      lightFill: num('Light fill', 0, 0.4, 0.005, 0.09),
-      lightFade: num('Light fade (s)', 0.1, 3, 0.05, 0.8),
+      // Touch: a tap makes the fireflies near it flash
       tapTime: num('Tap length (s)', 0.05, 1, 0.01, 0.25),
       tapRadius: num('Tap flash radius (cells)', 5, 100, 0.5, 30),
       // Grass and sky

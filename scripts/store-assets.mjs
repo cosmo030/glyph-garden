@@ -90,12 +90,13 @@ try {
   await waitForFlashes(30);
   await save(join(shots, '03-meadow-flashing.png'), await page.screenshot());
 
-  // 4. Meadow while holding: the light ring, with fireflies gathered around it
-  await page.mouse('mouseMoved', 330, 250);
-  await page.mouse('mousePressed', 330, 250);
-  await page.sleep(9000);
-  await save(join(shots, '04-meadow-holding.png'), await page.screenshot());
-  await page.mouse('mouseReleased', 330, 250);
+  // 4. Meadow right after a tap among the fireflies: everything near it flashes at once
+  await page.sleep(4000);
+  await page.mouse('mouseMoved', 640, 700);
+  await page.mouse('mousePressed', 640, 700);
+  await page.mouse('mouseReleased', 640, 700);
+  await page.sleep(250);
+  await save(join(shots, '04-meadow-tap.png'), await page.screenshot());
 
   // 5. Tune panel open on the Meadow, with its group expanded
   await page.eval(`document.querySelector('.tune-btn').click()`);
