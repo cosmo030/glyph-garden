@@ -131,20 +131,30 @@ export const schema = {
   meadow: {
     label: 'Meadow',
     params: {
-      background: color('Background', '#050a14'),
-      // Fireflies: they hover in a low band just above the grass
-      count: num('Fireflies', 0, 300, 1, 42),
-      band: num('Firefly band (cells)', 1, 40, 0.5, 7),
+      // The landscape: a sky gradient, two ranges of hills and a field that runs to the horizon
+      background: color('Sky colour (top)', '#040812'),
+      colHorizon: color('Sky colour (horizon)', '#1b2d55'),
+      skyCurve: num('Sky gradient curve', 0.3, 4, 0.05, 1.8),
+      horizon: num('Horizon (share of height)', 0.4, 0.9, 0.01, 0.66),
+      farHills: num('Far hills (cells)', 0, 20, 0.5, 4.5),
+      nearHills: num('Near hills (cells)', 0, 15, 0.5, 2),
+      colHillFar: color('Far hills colour', '#0e1a33'),
+      colHillNear: color('Near hills colour', '#08101d'),
+      colGroundFar: color('Field colour (far)', '#09131f'),
+      colGroundNear: color('Field colour (near)', '#0a1812'),
+      // Fireflies: each has a depth in the field; far ones are small and dim, near ones larger
+      count: num('Fireflies', 0, 300, 1, 60),
+      hoverHeight: num('Hover height (cells, nearest)', 0.5, 20, 0.5, 6),
       hover: num('Hover pull', 0, 3, 0.01, 0.6),
-      drift: num('Drift speed (cells/s)', 0, 6, 0.05, 0.8),
+      drift: num('Drift speed (cells/s, nearest)', 0, 6, 0.05, 0.9),
       wander: num('Wander', 0, 3, 0.01, 1),
       colFirefly: color('Firefly colour', '#d6ea5a'),
       // Flashing. Each firefly has a flash cycle (phase 0 to 1); the flash is the first part of it.
       flashRate: num('Flash rate (Hz)', 0.1, 2, 0.01, 0.45),
       rateSpread: num('Rate spread', 0, 0.5, 0.01, 0.12),
       flashLength: num('Flash length (of cycle)', 0.05, 0.6, 0.01, 0.3),
-      glowRadius: num('Glow radius (cells)', 0, 12, 0.1, 1.9),
-      glowStrength: num('Glow strength', 0, 2, 0.01, 0.7),
+      glowRadius: num('Glow radius (cells, nearest)', 0, 12, 0.1, 2.2),
+      glowStrength: num('Glow strength', 0, 2, 0.01, 0.75),
       tileGlow: num('Glow tile strength', 0, 1, 0.01, 0.2),
       coreTile: num('Firefly tile strength', 0, 1, 0.01, 0.35),
       restGlow: num('Resting body', 0, 1, 0.01, 0.24),
@@ -154,22 +164,22 @@ export const schema = {
       // Touch: a tap makes the fireflies near it flash
       tapTime: num('Tap length (s)', 0.05, 1, 0.01, 0.25),
       tapRadius: num('Tap flash radius (cells)', 5, 100, 0.5, 30),
-      // Grass and sky
-      grassHeight: num('Grass height (cells)', 0, 30, 0.5, 11),
-      grassDensity: num('Grass density', 0, 1, 0.01, 0.8),
-      grassTile: num('Grass tile strength', 0, 0.6, 0.01, 0.12),
+      // The field: rows of grass from the horizon to the bottom; near blades are tall and sway most
+      grassHeight: num('Grass height (cells, nearest)', 0, 30, 0.5, 9),
+      grassDensity: num('Grass cover (near)', 0, 1, 0.01, 0.5),
+      farGrass: num('Grass cover (far)', 0, 1, 0.01, 0.5),
+      haze: num('Distance haze', 0, 1, 0.01, 0.8),
+      grassTile: num('Grass tile strength', 0, 0.6, 0.01, 0.1),
       grassSway: num('Grass sway', 0, 3, 0.01, 1),
       windSpeed: num('Wind speed', 0, 3, 0.01, 0.6),
+      gusts: num('Gusts', 0, 1, 0.01, 0.6),
       colGrassDark: color('Grass colour (dark)', '#3fa863'),
       colGrass: color('Grass colour', '#6fdc8c'),
       colGrassTip: color('Grass tip colour', '#d2fba6'),
-      // The night sky: stars, a faint glow along the horizon, and now and then a shooting star
+      // The night sky: stars and now and then a shooting star
       starDensity: num('Stars (per 1000 sky cells)', 0, 120, 0.5, 48),
       twinkle: num('Twinkle', 0, 1, 0.01, 0.35),
       colStar: color('Star colour', '#b9c6e8'),
-      horizonGlow: num('Horizon glow', 0, 0.4, 0.005, 0.1),
-      horizonHeight: num('Horizon glow height (cells)', 0, 80, 1, 26),
-      colHorizon: color('Horizon colour', '#2a4a7e'),
       shootEvery: num('Shooting star every (s)', 2, 120, 0.5, 9),
       shootSpeed: num('Shooting star speed (cells/s)', 10, 150, 1, 62),
       shootLength: num('Shooting star trail (cells)', 2, 30, 0.5, 12),

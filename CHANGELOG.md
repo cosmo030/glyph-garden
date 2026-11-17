@@ -17,14 +17,20 @@ All notable changes are listed here. The format follows
 - The README links to the demo and the Chrome Web Store.
 - Shooting stars in the Meadow: now and then one crosses the upper sky and fades (`*--···`). New Tune
   sliders for how often, how fast and how long the trail is.
-- A faint glow along the Meadow's horizon (Horizon glow, height and colour).
+- The Meadow is now a field that runs to the horizon. A sky gradient, two ranges of rolling hills and
+  the field are painted behind the characters (new Landscape settings: sky colours and curve,
+  horizon height, hill heights and colours, field colours). The grass is drawn in rows from the
+  horizon to the front: far rows are tiny hazy marks that barely move, near blades are tall and sway,
+  clumps and gaps break it up, and gusts of wind roll through the field toward you (Grass cover far
+  and near, Distance haze, Gusts).
+- Fireflies have a depth in the field: far ones are small, dim and slow, near ones hover higher and
+  glow a little wider. Grass in front of a firefly hides it.
 
 ### Changed
 
-- The Meadow is calmer and reads more like a real night: the fireflies now stay in a low band just
-  above the grass (new Firefly band and Hover pull sliders) and are smaller and softer (smaller glow,
-  softer tiles, 42 instead of 90). The sky above is open and clear, with many more stars in three
-  sizes that twinkle slowly.
+- The Meadow is calmer and reads more like a real night: the fireflies stay over the field (new Hover
+  height and Hover pull sliders) and are smaller and softer. The sky above is open and clear, with
+  many more stars in three sizes that twinkle slowly.
 - Stars are now set as a density (Stars per 1000 sky cells), so large screens are as starry as small
   ones. The old Stars count is replaced.
 - A new night greeting in the Meadow: "Keep an eye on the sky."

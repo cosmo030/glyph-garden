@@ -232,6 +232,7 @@ export async function start() {
     const w = values.world;
     renderer.draw({
       background: rgb(active.background?.(world) ?? w.background),
+      landscape: active.landscape?.(world) ?? null,
       gridOpacity: w.gridOpacity,
       gridEvery: w.gridEvery,
       tileFill: w.tileFill,

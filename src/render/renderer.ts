@@ -1,5 +1,6 @@
 import { buildAtlas, SLOT } from './atlas';
 import type { RGB } from './color';
+import { HILL_SEEDS, type Landscape } from './landscape';
 
 // WebGL2 renderer for a grid of character cells.
 // Each cell is: grid position, tile colour, glyph colour, glyph index.
@@ -66,7 +67,9 @@ void main() {
   outColor = col;
 }`;
 
-// Background: one full-screen triangle that paints the base colour and grid lines.
+// Background: one full-screen triangle that paints the base colour and grid lines. A scene can ask
+// for a landscape instead of a flat colour: a sky gradient, two ranges of rolling hills and a field
+// below the horizon. Painting it here, per pixel, keeps its edges smooth (tiles would show the grid).
 const BG_VS = `#version 300 es
 const vec2 P[3] = vec2[3](vec2(-1.0, -1.0), vec2(3.0, -1.0), vec2(-1.0, 3.0));
 void main() { gl_Position = vec4(P[gl_VertexID], 0.0, 1.0); }`;
@@ -78,18 +81,48 @@ uniform float u_gridAlpha;
 uniform float u_cellPx;
 uniform float u_every;
 uniform float u_viewH;
+uniform float u_land; // 1 when a landscape is painted, 0 for the flat colour
+uniform vec3 u_skyTop;
+uniform vec3 u_skyHorizon;
+uniform float u_skyCurve;
+uniform float u_horizon; // in cells from the top
+uniform vec2 u_hills; // far and near hill heights, in cells
+uniform vec3 u_hillFar;
+uniform vec3 u_hillNear;
+uniform vec3 u_groundFar;
+uniform vec3 u_groundNear;
 out vec4 outColor;
+// Must match hillHeight() in render/landscape.ts: two slow sine waves, so the hills roll gently.
+float hill(float x, float amp, float seed) {
+  return amp * (0.55 + 0.3 * sin(x * 0.045 + seed) + 0.15 * sin(x * 0.13 + seed * 2.3));
+}
 void main() {
   vec2 px = vec2(gl_FragCoord.x, u_viewH - gl_FragCoord.y);
+  vec3 base = u_bg;
+  if (u_land > 0.5) {
+    vec2 c = px / u_cellPx; // position in cells
+    float aa = 1.0 / u_cellPx; // one pixel, in cells, for soft edges
+    float t = clamp(c.y / u_horizon, 0.0, 1.0);
+    vec3 sky = mix(u_skyTop, u_skyHorizon, pow(t, u_skyCurve));
+    float farLine = u_horizon - hill(c.x, u_hills.x, ${HILL_SEEDS[0].toFixed(3)});
+    float nearLine = u_horizon - hill(c.x, u_hills.y, ${HILL_SEEDS[1].toFixed(3)});
+    float rows = max(1.0, u_viewH / u_cellPx - u_horizon);
+    vec3 ground = mix(u_groundFar, u_groundNear, clamp((c.y - u_horizon) / rows, 0.0, 1.0));
+    base = mix(sky, u_hillFar, smoothstep(farLine - aa, farLine + aa, c.y));
+    base = mix(base, u_hillNear, smoothstep(nearLine - aa, nearLine + aa, c.y));
+    base = mix(base, ground, smoothstep(u_horizon - aa, u_horizon + aa, c.y));
+  }
   float period = u_cellPx * u_every;
   vec2 f = mod(px, period);
   float line = (f.x < 1.0 || f.y < 1.0) ? 1.0 : 0.0;
-  outColor = vec4(mix(u_bg, vec3(1.0), line * u_gridAlpha), 1.0);
+  outColor = vec4(mix(base, vec3(1.0), line * u_gridAlpha), 1.0);
 }`;
 
 /** Look of the grid and tiles; these come straight from the World settings in Tune. */
 export type DrawStyle = {
   background: RGB;
+  /** Paint this landscape instead of the flat background colour (the Meadow does). */
+  landscape?: Landscape | null;
   gridOpacity: number;
   gridEvery: number;
   tileFill: number;
@@ -145,7 +178,22 @@ export class GlyphRenderer {
       'u_cellPxF',
     ])
       this.u[n] = gl.getUniformLocation(this.cellProg, n);
-    for (const n of ['u_bg', 'u_gridAlpha', 'u_every', 'u_viewH'])
+    for (const n of [
+      'u_bg',
+      'u_gridAlpha',
+      'u_every',
+      'u_viewH',
+      'u_land',
+      'u_skyTop',
+      'u_skyHorizon',
+      'u_skyCurve',
+      'u_horizon',
+      'u_hills',
+      'u_hillFar',
+      'u_hillNear',
+      'u_groundFar',
+      'u_groundNear',
+    ])
       this.u['bg_' + n] = gl.getUniformLocation(this.bgProg, n);
     this.u['bg_u_cellPx'] = gl.getUniformLocation(this.bgProg, 'u_cellPx');
 
@@ -253,6 +301,19 @@ export class GlyphRenderer {
     gl.uniform1f(this.u.bg_u_cellPx, this.cellPx);
     gl.uniform1f(this.u.bg_u_every, s.gridEvery);
     gl.uniform1f(this.u.bg_u_viewH, this.height);
+    const l = s.landscape;
+    gl.uniform1f(this.u.bg_u_land, l ? 1 : 0);
+    if (l) {
+      this.color3(this.u.bg_u_skyTop, l.skyTop);
+      this.color3(this.u.bg_u_skyHorizon, l.skyHorizon);
+      gl.uniform1f(this.u.bg_u_skyCurve, l.skyCurve);
+      gl.uniform1f(this.u.bg_u_horizon, l.horizon);
+      gl.uniform2f(this.u.bg_u_hills, l.farHills, l.nearHills);
+      this.color3(this.u.bg_u_hillFar, l.hillFar);
+      this.color3(this.u.bg_u_hillNear, l.hillNear);
+      this.color3(this.u.bg_u_groundFar, l.groundFar);
+      this.color3(this.u.bg_u_groundNear, l.groundNear);
+    }
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     if (this.count === 0) return;
@@ -276,6 +337,11 @@ export class GlyphRenderer {
     gl.uniform1f(this.u.u_lod, Math.max(0, Math.log2(SLOT / Math.max(1, this.cellPx * s.glyphScale))));
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.count);
     gl.bindVertexArray(null);
+  }
+
+  /** Sets a vec3 uniform from a 0-255 colour. */
+  private color3(loc: WebGLUniformLocation | null, c: RGB) {
+    this.gl.uniform3f(loc, c[0] / 255, c[1] / 255, c[2] / 255);
   }
 }
 
