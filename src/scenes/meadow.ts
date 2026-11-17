@@ -1,19 +1,26 @@
 import type { GlyphRenderer } from '../render/renderer';
 import { pack, packRgb, packShade } from '../render/color';
 import { glyph } from '../render/atlas';
-import { hash2, gauss, rand } from '../sim/noise';
+import { HILL_SEEDS, hillHeight, type Landscape } from '../render/landscape';
+import { hash2, noise2, gauss, rand } from '../sim/noise';
 import { rgb } from '../sim/colors';
 import type { Band, Scene, World } from '../sim/world';
 
-// The Meadow scene: a clear night over swaying grass, with fireflies low above it.
+// The Meadow scene: a clear night over a field that runs to the horizon, with fireflies above it.
 //
-// Most of the screen is open sky: stars that twinkle slowly, a faint glow along the horizon, and now
-// and then a shooting star. The fireflies keep to a low band just above the grass, small and soft, so
-// the sky stays calm.
+// The landscape (a sky gradient, two ranges of rolling hills and the field) is painted by the
+// renderer's background pass, so its edges are smooth. On top of it, the field is rows of grass from
+// the horizon to the bottom of the screen. A row's depth z runs from 0 at the horizon to 1 at the
+// bottom: far rows are tiny hazy marks that barely move, near rows are tall blades that sway, and gusts
+// of wind roll through the field toward you. Above the hills: stars that twinkle slowly, and now and
+// then a shooting star.
 //
-// Fireflies drift slowly in their band and flash. Each one has a flash cycle, a "phase" that
-// runs from 0 to 1 at its own rate; the flash is the first part of the cycle (a quick rise, a slower
-// fade) and it is dark for the rest.
+// Every firefly has a depth too. Far ones are tiny, dim and slow (they cross less of the screen, like
+// anything far away); near ones hover higher, glow wider and move faster. Grass that is nearer than a
+// firefly hides it.
+//
+// Each firefly has a flash cycle, a "phase" that runs from 0 to 1 at its own rate; the flash is the
+// first part of the cycle (a quick rise, a slower fade) and it is dark for the rest.
 //
 // Synchronising (pulse-coupled oscillators, like real fireflies): when a firefly flashes it nudges
 // every unlit neighbour within `syncRadius` a little further along its own cycle, by up to
@@ -22,11 +29,10 @@ import type { Band, Scene, World } from '../sim/world';
 // waves. Over a few cycles neighbours fall into step and the meadow flashes in groups. With
 // coupling 0 nothing is nudged and every firefly flashes on its own, at random.
 //
-// The glow is an ASCII light ramp. Every cell within `glowRadius` of a flashing firefly gets an
-// intensity I = flash * (1 - d / R)^2 (d is the distance in cells from the firefly, so the glow is
-// round), and I picks a character from dim to bright (. : + *) with a faint tile of the firefly
-// colour behind it. Where two glows overlap the brighter cell wins, so the picture does not depend
-// on the order the fireflies are drawn in.
+// The glow is an ASCII light ramp. Every cell within the firefly's glow radius R gets an intensity
+// I = flash * (1 - d / R)^2 (d is the distance in cells from the firefly, so the glow is round), and
+// I picks a character from dim to bright (. : + *) with a faint tile of the firefly colour behind it.
+// Where two glows overlap the brighter cell wins, so the picture does not depend on draw order.
 //
 // Touch: a tap makes every firefly within `tapRadius` flash at once, and the coupling carries that
 // flash outward. A longer press does nothing, so a slow click or a drag doesn't set them off.
@@ -52,14 +58,17 @@ const SHOOT_HEAD = glyph('*');
 const SHOOT_STREAK = glyph('-'); // the bright part of the trail, right behind the head
 const SHOOT_TRAIL = glyph('·'); // the fading rest of it
 const SHOOT_STREAK_PART = 0.4; // how much of the trail is streak
+// Grass. Far rows are single marks; nearer rows are blades that end in a tip.
 const BLADE = glyph('|');
 const LEAN_RIGHT = glyph('/');
 const LEAN_LEFT = glyph('\\');
 const TIP = glyph("'");
 const STUB = glyph(',');
+const FAR_MARKS = [glyph('.'), glyph(','), glyph("'"), glyph('`')];
+const FAR_UNTIL = 0.3; // rows with a depth below this are far: one small mark per blade
 const TAU = Math.PI * 2;
 
-/** The firefly meadow: a night habitat of fireflies over swaying grass. */
+/** The firefly meadow: a night habitat of fireflies over a field that runs to the horizon. */
 export class Meadow implements Scene {
   readonly id = 'meadow';
   readonly name = 'Meadow';
@@ -89,9 +98,8 @@ export class Meadow implements Scene {
   private vy = new Float32Array(CAP);
   private heading = new Float32Array(CAP); // direction it is drifting in
   private wanderA = new Float32Array(CAP); // how fast the heading is turning
-  // The height it likes to hover at, as a place in the band: 0 at its top, 1 at its bottom. Kept
-  // relative so a resized window or a new Firefly band setting moves the whole band along.
-  private home = new Float32Array(CAP);
+  private depth = new Float32Array(CAP); // 0 at the horizon, 1 right in front
+  private home = new Float32Array(CAP); // how high it likes to hover, 0 to 1 of Hover height
   private pace = new Float32Array(CAP); // personal speed factor
   private phase = new Float32Array(CAP); // flash cycle, 0 to 1; the flash is the first part
   private rateJ = new Float32Array(CAP); // personal flash rate offset, -1 to 1 (times Rate spread)
@@ -100,12 +108,15 @@ export class Meadow implements Scene {
   private queue = new Int32Array(CAP);
   private qn = 0;
 
-  // Glow intensity per cell for the frame being drawn, and the cells that were touched (so clearing
-  // is cheap). A value below 1 is a ramp cell; a firefly's own cell holds 1 + its flash. These are
-  // only reallocated when the grid size changes, never per frame.
+  // Per-cell maps for the frame being drawn, only reallocated when the grid size changes. `glow` is
+  // the firefly light (below 1 a ramp cell, 1 + flash for a firefly's own cell) and `glowZ` the depth
+  // of the firefly it came from, so nearer grass can hide it. `touched` lists the glow cells, so
+  // clearing is cheap. `taken` marks cells the field has already drawn a blade in.
   private glow = new Float32Array(0);
+  private glowZ = new Float32Array(0);
   private touched = new Int32Array(0);
   private tn = 0;
+  private taken = new Uint8Array(0);
 
   // The press that may become a tap
   private pressed = false;
@@ -124,6 +135,20 @@ export class Meadow implements Scene {
   private sDist = new Float32Array(SHOOT_CAP);
   private nextShoot = 0; // world time of the next shooting star
 
+  // The landscape handed to the renderer, updated in place every frame (no allocation)
+  private land: Landscape = {
+    skyTop: [0, 0, 0],
+    skyHorizon: [0, 0, 0],
+    skyCurve: 1,
+    horizon: 1,
+    farHills: 0,
+    nearHills: 0,
+    hillFar: [0, 0, 0],
+    hillNear: [0, 0, 0],
+    groundFar: [0, 0, 0],
+    groundNear: [0, 0, 0],
+  };
+
   enter(world: World) {
     this.n = 0;
     this.qn = 0;
@@ -139,25 +164,52 @@ export class Meadow implements Scene {
   }
 
   rescale(sx: number) {
-    for (let i = 0; i < this.n; i++) {
-      // Only sideways: the band sits at a fixed height above the bottom, so after a resize the hover
-      // spring brings each firefly back to its place in the band
-      this.x[i] *= sx;
-    }
+    // Only sideways: heights follow the horizon and the ground, so after a resize the hover spring
+    // brings each firefly back above its own spot in the field
+    for (let i = 0; i < this.n; i++) this.x[i] *= sx;
   }
 
   background(world: World) {
     return world.params.meadow.background;
   }
 
-  /** The lowest row a firefly may reach: just above the tallest grass. */
-  private bandBottom(world: World) {
-    return Math.max(2, world.rows - world.params.meadow.grassHeight - 1);
+  /** The sky, hills and field for the renderer's background pass, from the Meadow settings. */
+  landscape(world: World): Landscape {
+    const m = world.params.meadow;
+    const l = this.land;
+    l.skyTop = rgb(m.background);
+    l.skyHorizon = rgb(m.colHorizon);
+    l.skyCurve = m.skyCurve;
+    l.horizon = this.horizon(world);
+    l.farHills = m.farHills;
+    l.nearHills = m.nearHills;
+    l.hillFar = rgb(m.colHillFar);
+    l.hillNear = rgb(m.colHillNear);
+    l.groundFar = rgb(m.colGroundFar);
+    l.groundNear = rgb(m.colGroundNear);
+    return l;
   }
 
-  /** The top of the band the fireflies like to hover in. Above it is open sky. */
-  private bandTop(world: World) {
-    return Math.max(1, this.bandBottom(world) - world.params.meadow.band);
+  // ---- Where things are -------------------------------------------------------------------------
+
+  /** The horizon line, in rows from the top. The field starts here. */
+  private horizon(world: World) {
+    return world.rows * world.params.meadow.horizon;
+  }
+
+  /** The row of the ground at depth z (0 at the horizon, 1 at the bottom of the screen). */
+  private groundAt(world: World, z: number) {
+    const h = this.horizon(world);
+    return h + z * (world.rows - 1 - h);
+  }
+
+  /** The lowest row of open sky at column x: just above the far hills there. */
+  private skyFloor(world: World, x: number) {
+    const m = world.params.meadow;
+    return (
+      this.horizon(world) -
+      Math.max(hillHeight(x, m.farHills, HILL_SEEDS[0]), hillHeight(x, m.nearHills, HILL_SEEDS[1]))
+    );
   }
 
   /** Spawns or removes fireflies so the count matches the Fireflies slider. */
@@ -167,14 +219,23 @@ export class Meadow implements Scene {
     if (this.n > want) this.n = want;
   }
 
-  /** Adds one firefly at a random spot in the band above the grass, with a random phase and pace. */
+  /**
+   * How high a firefly at depth z hovers above the ground, in cells. Nearer means higher on screen,
+   * the same height in the world seen from closer.
+   */
+  private hoverAt(world: World, i: number) {
+    const z = this.depth[i];
+    return (0.4 + this.home[i] * world.params.meadow.hoverHeight) * (0.2 + 0.8 * z);
+  }
+
+  /** Adds one firefly somewhere over the field, with a random depth, phase and pace. */
   private spawn(world: World) {
     const i = this.n++;
-    const top = this.bandTop(world);
-    const bottom = this.bandBottom(world);
+    // More of them in the middle and near part of the field, where there is room to see them
+    this.depth[i] = 0.06 + 0.94 * Math.pow(Math.random(), 0.75);
     this.home[i] = Math.random();
     this.x[i] = rand(0, world.cols);
-    this.y[i] = Math.min(bottom, Math.max(0, top + this.home[i] * (bottom - top) + gauss()));
+    this.y[i] = this.groundAt(world, this.depth[i]) - this.hoverAt(world, i);
     this.vx[i] = this.vy[i] = 0;
     this.heading[i] = rand(0, TAU);
     this.wanderA[i] = gauss() * 0.5;
@@ -248,8 +309,6 @@ export class Meadow implements Scene {
     this.stepShootingStars(dt, world);
 
     // ---- Movement ----
-    const sky = this.bandBottom(world);
-    const bandTop = this.bandTop(world);
     const sqrtDt = Math.sqrt(dt);
     const wanderDecay = Math.exp(-0.5 * dt);
     const relax = 1 - Math.exp(-1.5 * dt); // how quickly velocity settles on where it wants to go
@@ -258,11 +317,14 @@ export class Meadow implements Scene {
       // Gentle wandering: the heading turns by a slowly changing amount (a smoothed random walk)
       this.wanderA[i] = this.wanderA[i] * wanderDecay + gauss() * m.wander * sqrtDt;
       this.heading[i] += this.wanderA[i] * dt;
-      const speed = m.drift * this.pace[i];
+      // Far away, the same flight covers less of the screen
+      const near = 0.3 + 0.7 * this.depth[i];
+      const speed = m.drift * this.pace[i] * near;
 
-      // A spring toward the height it likes (Hover pull), so they stay in their band above the grass.
-      // Half the vertical drift, so they mostly wander sideways, the way fireflies over a field do.
-      const homeY = bandTop + this.home[i] * (sky - bandTop);
+      // A spring toward its hover height above its own spot in the field (Hover pull). Half the
+      // vertical drift, so they mostly wander sideways, the way fireflies over a field do.
+      const ground = this.groundAt(world, this.depth[i]);
+      const homeY = ground - this.hoverAt(world, i);
       const tx = Math.cos(this.heading[i]) * speed;
       const ty = Math.sin(this.heading[i]) * speed * 0.5 + (homeY - this.y[i]) * m.hover;
       this.vx[i] += (tx - this.vx[i]) * relax;
@@ -270,15 +332,15 @@ export class Meadow implements Scene {
 
       this.x[i] += this.vx[i] * dt;
       this.y[i] += this.vy[i] * dt;
-      // Wrap sideways; at the top and bottom turn softly, and never go into the grass
+      // Wrap sideways; never above the top or into the ground
       if (this.x[i] < -2) this.x[i] += span;
       else if (this.x[i] > world.cols + 2) this.x[i] -= span;
       if (this.y[i] < 0) {
         this.y[i] = 0;
         if (this.vy[i] < 0) this.vy[i] = 0;
       }
-      if (this.y[i] > sky) {
-        this.y[i] = sky;
+      if (this.y[i] > ground - 0.3) {
+        this.y[i] = ground - 0.3;
         if (this.vy[i] > 0) this.vy[i] = 0;
       }
     }
@@ -294,7 +356,7 @@ export class Meadow implements Scene {
       this.nextShoot = world.time + m.shootEvery * rand(0.5, 1.5);
       if (this.sn < SHOOT_CAP) {
         const i = this.sn++;
-        const top = this.bandTop(world);
+        const top = this.horizon(world) - m.farHills - 2;
         // A shallow path down to the left or right, starting in the upper part of the sky
         const angle = rand(0.25, 0.6); // radians below the horizontal
         const side = Math.random() < 0.5 ? -1 : 1;
@@ -331,54 +393,60 @@ export class Meadow implements Scene {
     }
   }
 
-  /** Draws the sky (horizon glow, stars, shooting stars), the grass, then the fireflies. */
+  /**
+   * Draws the sky (stars, shooting stars), then the field, then the fireflies. The fireflies' light is
+   * worked out first so the field can leave out the cells where a firefly is in front of the grass.
+   */
   draw(r: GlyphRenderer, world: World) {
-    const top = this.bandTop(world);
-    this.drawHorizon(r, world);
-    this.drawStars(r, world, top);
+    this.fitMaps(world);
+    this.drawStars(r, world);
     this.drawShootingStars(r, world);
-    this.drawGrass(r, world);
+    this.lightFireflies(world);
+    this.drawField(r, world);
     this.drawFireflies(r, world);
   }
 
+  /** Makes the per-cell maps match the grid (only reallocates when the grid size changed). */
+  private fitMaps(world: World) {
+    const size = Math.ceil(world.cols) * Math.ceil(world.rows);
+    if (this.glow.length !== size) {
+      this.glow = new Float32Array(size);
+      this.glowZ = new Float32Array(size);
+      this.touched = new Int32Array(size);
+      this.taken = new Uint8Array(size);
+    }
+  }
+
   /**
-   * The fireflies. Lit ones add their glow to a per-cell intensity map (keeping the brighter value
-   * where glows overlap), then each touched cell is drawn once: a ramp character with a faint tile,
-   * or, for a firefly's own cell, a solid tile with a bright "•". Dark ones keep a very faint body.
+   * Works out every firefly's light into the glow map: lit ones as a round ramp, keeping the brighter
+   * value where glows overlap (with the depth it came from), and their own cell as 1 + flash. Size and
+   * brightness shrink with distance. Nothing is drawn yet.
    */
-  private drawFireflies(r: GlyphRenderer, world: World) {
+  private lightFireflies(world: World) {
     const m = world.params.meadow;
     const cols = Math.ceil(world.cols);
     const rows = Math.ceil(world.rows);
-    if (this.glow.length !== cols * rows) {
-      this.glow = new Float32Array(cols * rows);
-      this.touched = new Int32Array(cols * rows);
-    }
     const glow = this.glow;
+    const glowZ = this.glowZ;
     const touched = this.touched;
     this.tn = 0;
 
-    const col = rgb(m.colFirefly);
     const L = m.flashLength;
     const rise = L * 0.2; // quick rise over the first fifth of the flash, then a slower fade
-    const R = m.glowRadius;
-    const R2 = R * R;
-    const reach = Math.ceil(R);
-    const rest = packShade(col, -0.35, m.restGlow);
-
     for (let i = 0; i < this.n; i++) {
+      const z = this.depth[i];
       const p = this.phase[i];
       const px = this.x[i];
       const py = this.y[i];
       const cx = Math.floor(px);
       const cy = Math.floor(py);
       const flash = p >= L ? 0 : p < rise ? p / rise : Math.pow(1 - (p - rise) / (L - rise), 1.6);
-      if (flash < 0.02) {
-        r.push(cx, cy, 0, rest, CORE); // dark between flashes: only a faint body
-        continue;
-      }
       // Ramp cells: I = flash * (1 - d / R)^2 for every cell centre within R of the firefly
-      if (R > 0.3 && m.glowStrength > 0) {
+      const R = m.glowRadius * (0.25 + 0.75 * z);
+      const strength = m.glowStrength * (0.4 + 0.6 * z);
+      if (flash >= 0.02 && R > 0.3 && strength > 0) {
+        const R2 = R * R;
+        const reach = Math.ceil(R);
         for (let oy = -reach; oy <= reach; oy++) {
           const gy = cy + oy;
           if (gy < 0 || gy >= rows) continue;
@@ -390,34 +458,59 @@ export class Meadow implements Scene {
             const d2 = dx * dx + dy * dy;
             if (d2 >= R2) continue; // a round glow, no square corners
             const k = 1 - Math.sqrt(d2) / R;
-            const I = Math.min(0.999, m.glowStrength * flash * k * k);
+            const I = Math.min(0.999, strength * flash * k * k);
             if (I < GLOW_MIN) continue;
             const idx = gy * cols + gx;
             const was = glow[idx];
             if (was === 0) touched[this.tn++] = idx;
-            if (I > was) glow[idx] = I;
+            if (I > was) {
+              glow[idx] = I;
+              glowZ[idx] = z;
+            }
           }
         }
       }
-      // The firefly's own cell holds 1 + flash, so it beats any ramp value and the brighter of two cores wins
+      // The firefly's own cell holds 1 + flash, so it beats any ramp value and the brighter of two
+      // cores wins. A dark firefly still keeps a faint body (flash 0).
       if (cx >= 0 && cx < cols && cy >= 0 && cy < rows) {
         const idx = cy * cols + cx;
         const was = glow[idx];
         if (was === 0) touched[this.tn++] = idx;
-        if (1 + flash > was) glow[idx] = 1 + flash;
+        if (1 + flash > was) {
+          glow[idx] = 1 + flash;
+          glowZ[idx] = z;
+        }
       }
     }
+  }
 
-    // One push per touched cell, then clear the map for the next frame
+  /**
+   * Draws each lit cell once: a ramp character with a faint tile, or for a firefly's own cell a soft
+   * tile and a "•" (just a faint body between flashes). Cells the field hid are skipped. Then the
+   * map is cleared for the next frame.
+   */
+  private drawFireflies(r: GlyphRenderer, world: World) {
+    const m = world.params.meadow;
+    const cols = Math.ceil(world.cols);
+    const col = rgb(m.colFirefly);
+    const glow = this.glow;
+    const glowZ = this.glowZ;
     for (let k = 0; k < this.tn; k++) {
-      const idx = touched[k];
+      const idx = this.touched[k];
       const v = glow[idx];
+      const z = glowZ[idx];
       glow[idx] = 0;
+      if (v <= 0) continue; // hidden behind nearer grass
       const gy = Math.floor(idx / cols);
       const gx = idx - gy * cols;
       if (v >= 1) {
-        const f = v - 1; // a firefly's own cell: a soft tile (Firefly tile strength) and a bright "•"
-        r.push(gx, gy, packShade(col, 0.2 * f, m.coreTile * (0.4 + 0.6 * f)), packShade(col, 0.6 + 0.35 * f, 1), CORE);
+        const f = v - 1;
+        if (f < 0.02) {
+          r.push(gx, gy, 0, packShade(col, -0.35, m.restGlow * (0.4 + 0.6 * z)), CORE); // dark: a faint body
+        } else {
+          const tile = m.coreTile * (0.2 + 0.8 * z) * (0.4 + 0.6 * f);
+          r.push(gx, gy, packShade(col, 0.2 * f, tile), packShade(col, 0.6 + 0.35 * f, 0.5 + 0.5 * f), CORE);
+        }
       } else {
         let step = 0;
         while (step < 3 && v >= RAMP_FROM[step + 1]) step++;
@@ -429,13 +522,13 @@ export class Meadow implements Scene {
 
   /**
    * The stars: mostly faint "·", some "•", and a few bright "+" with a soft tile. They fill the sky
-   * down to just above the fireflies, thinning toward the horizon the way haze hides the low ones, and
-   * twinkle slowly. Their places come from a hash, so none are stored.
+   * down to the hills, thinning toward the horizon the way haze hides the low ones, and twinkle
+   * slowly. Their places come from a hash, so none are stored.
    */
-  private drawStars(r: GlyphRenderer, world: World, top: number) {
+  private drawStars(r: GlyphRenderer, world: World) {
     const m = world.params.meadow;
     const col = rgb(m.colStar);
-    const skyRows = Math.max(1, top - 2);
+    const skyRows = Math.max(1, this.horizon(world) - m.farHills * 0.55 - 1);
     // A density rather than a count, so a big screen gets as starry a sky as a small one
     const count = Math.min(MAX_STARS, Math.round((m.starDensity / 1000) * world.cols * skyRows));
     for (let i = 0; i < count; i++) {
@@ -443,6 +536,7 @@ export class Meadow implements Scene {
       // u^1.4 puts more stars high up and fewer near the horizon
       const u = Math.pow(hash2(i, 1, SEED), 1.4);
       const y = Math.floor(u * skyRows);
+      if (y >= this.skyFloor(world, x + 0.5) - 1) continue; // behind the hills
       const rate = 0.2 + hash2(i, 2, SEED) * 0.6; // slow: a calm sky, not a flickering one
       const tw = 1 - m.twinkle * (0.5 + 0.5 * Math.sin(world.time * rate + hash2(i, 3, SEED) * TAU));
       const haze = 1 - 0.55 * u; // the lowest stars are a little dimmer
@@ -458,27 +552,9 @@ export class Meadow implements Scene {
   }
 
   /**
-   * A faint glow along the horizon, behind the fireflies and the grass: tiles of the horizon colour
-   * that fade out upward over Horizon glow height. It gives the sky depth and a little warmth.
-   */
-  private drawHorizon(r: GlyphRenderer, world: World) {
-    const m = world.params.meadow;
-    if (m.horizonGlow <= 0 || m.horizonHeight < 1) return;
-    const col = rgb(m.colHorizon);
-    const bottom = Math.floor(world.rows) - 1;
-    const cols = Math.ceil(world.cols);
-    const h = Math.round(m.horizonHeight);
-    for (let k = 0; k < h; k++) {
-      const u = 1 - k / h; // 1 at the bottom row, toward 0 at the top of the glow
-      const bg = packRgb(col, m.horizonGlow * u * u);
-      for (let x = 0; x < cols; x++) r.push(x, bottom - k, bg, 0, 0);
-    }
-  }
-
-  /**
    * Shooting stars: a bright "*" head, then a streak of "-" and a tail of "·" that fade with distance
-   * (it reads as *--··· in motion). The whole
-   * streak fades in fast and out more slowly over its short life.
+   * (it reads as *--··· in motion). The whole streak fades in fast and out more slowly over its short
+   * life.
    */
   private drawShootingStars(r: GlyphRenderer, world: World) {
     if (this.sn === 0) return;
@@ -508,45 +584,100 @@ export class Meadow implements Scene {
   }
 
   /**
-   * A band of grass along the bottom. Each blade is "|", "/" or "\" in one of two greens (dark or
-   * mid, picked by a hash), a little darker at the root, and ends in a lighter tip that leans the
-   * way the wind pushes it. The wind is a long travelling wave plus a slower one, so it gusts.
+   * The field: one rank of grass rooted in every row from the bottom of the screen up to the horizon,
+   * drawn front to back so nearer blades hide the ones behind them (`taken`). For a row at depth z:
+   * - blades get taller (Grass height times z^1.7), so far rows are single marks;
+   * - how much of the ground the grass covers goes from Grass density (far) to (near). A tall blade
+   *   covers several rows, so the chance to root a blade in a row is lowered to match:
+   *   p = 1 - (1 - cover)^(1 / average height). Smooth noise then thins it into clumps and gaps;
+   * - the colour fades into the horizon sky with distance (Distance haze), and gets darker;
+   * - sway grows with z, so the far field is still and the near grass moves most;
+   * - the wind is a wave whose crests move from the horizon toward you (its phase grows with the
+   *   distance 1 / (z + 0.15) plus time), times a slow gust envelope, so gusts roll through the field.
+   * A grass cell nearer than a firefly in the same cell hides it; a farther one is left out.
    */
-  private drawGrass(r: GlyphRenderer, world: World) {
+  private drawField(r: GlyphRenderer, world: World) {
     const m = world.params.meadow;
-    if (m.grassHeight <= 0 || m.grassDensity <= 0) return;
+    const cols = Math.ceil(world.cols);
+    const bottom = Math.floor(world.rows) - 1;
+    const top = Math.ceil(this.horizon(world));
+    if (m.grassHeight <= 0 || top > bottom) return;
     const dark = rgb(m.colGrassDark);
     const mid = rgb(m.colGrass);
     const tip = rgb(m.colGrassTip);
-    const bottom = Math.floor(world.rows) - 1;
-    const cols = Math.ceil(world.cols);
+    const hazeCol = rgb(m.colHorizon);
     const t = world.time * m.windSpeed;
-    for (let x = 0; x < cols; x++) {
-      if (hash2(x, 4, SEED) > m.grassDensity) continue; // no blade in this column
-      const height = Math.max(1, Math.round(m.grassHeight * (0.3 + 0.7 * hash2(x, 5, SEED))));
-      const tone = 0.9 + 0.2 * hash2(x, 6, SEED); // each blade is a slightly different green
-      const base = hash2(x, 7, SEED) < 0.5 ? dark : mid;
-      const wind = Math.sin(x * 0.11 - t * 1.6) + 0.5 * Math.sin(x * 0.047 - t * 0.9 + 1.3);
-      const tipOffset = m.grassSway * wind * 0.35 * height; // how far the tip leans, in cells
-      let off = 0;
-      for (let k = 0; k < height; k++) {
-        const u = (k + 1) / height;
-        const nextOff = Math.round(tipOffset * u * u); // blades bend more toward the tip
-        let g = nextOff > off ? LEAN_RIGHT : nextOff < off ? LEAN_LEFT : BLADE;
-        let fg: number;
-        if (k === height - 1) {
-          // The tip: a lighter shade, leaning with the wind (an apostrophe when it is calm)
-          g = tipOffset > 0.6 ? LEAN_RIGHT : tipOffset < -0.6 ? LEAN_LEFT : TIP;
-          // (clamped: pack() wraps a channel above 255 instead of capping it)
-          fg = pack(Math.min(255, tip[0] * tone), Math.min(255, tip[1] * tone), Math.min(255, tip[2] * tone), 1);
-        } else {
-          if (height <= 2 && k === 0) g = STUB;
-          const shade = tone * (0.8 + 0.2 * u); // a little darker at the root
-          fg = pack(base[0] * shade, base[1] * shade, base[2] * shade, 1);
+    const taken = this.taken;
+    taken.fill(0);
+    const glow = this.glow;
+    const glowZ = this.glowZ;
+
+    // Start a few rows below the screen: blades rooted there still reach up into view, so the nearest
+    // grass fills the bottom edge the way it would in a real field
+    const below = Math.ceil(m.grassHeight * 0.6);
+    for (let row = bottom + below; row >= top; row--) {
+      const z = Math.min(1, (row - top) / Math.max(1, bottom - top));
+      const far = z < FAR_UNTIL;
+      const tall = m.grassHeight * Math.pow(z, 1.7);
+      const cover = m.farGrass + (m.grassDensity - m.farGrass) * z;
+      const plant = 1 - Math.pow(1 - Math.min(0.99, cover), 1 / Math.max(1, far ? 1 : tall * 0.675));
+      // Mix toward the haze colour with distance, and darken: k is how much of the grass colour is left
+      const k = 1 - m.haze * Math.pow(1 - z, 1.5);
+      const light = 0.35 + 0.65 * z;
+      const dist = 1 / (z + 0.15);
+      const sway = m.grassSway * Math.pow(z, 1.5);
+      for (let x = 0; x < cols; x++) {
+        // Clumps: noise that is wide across and, further away, squeezed into fewer rows
+        const clump = noise2(x * 0.09, row * (0.15 + 0.35 * (1 - z)), SEED + 1);
+        if (hash2(x, row, SEED) > plant * (0.25 + 1.5 * clump * clump)) continue; // no blade rooted here
+        const h = far ? 1 : Math.max(1, Math.round(tall * (0.35 + 0.65 * hash2(x, row + 999, SEED))));
+        const base = hash2(x, row + 555, SEED) < 0.5 ? dark : mid;
+        const tone = (0.9 + 0.2 * hash2(x, row + 777, SEED)) * light;
+        const gust = 1 - m.gusts + m.gusts * (0.5 + 0.5 * Math.sin(t * 0.23 + x * 0.013));
+        const wind = (Math.sin(x * 0.06 + dist * 1.1 + t * 1.4) + 0.5 * Math.sin(x * 0.021 - t * 0.5)) * gust;
+        const tipOffset = sway * wind * 0.35 * h;
+        let off = 0;
+        for (let s = 0; s < h; s++) {
+          const u = (s + 1) / h;
+          const nextOff = Math.round(tipOffset * u * u); // blades bend more toward the tip
+          const cx = x + off;
+          const cy = row - s;
+          // The blade leans the way its next cell steps
+          let g = nextOff > off ? LEAN_RIGHT : nextOff < off ? LEAN_LEFT : BLADE;
+          off = nextOff;
+          if (cx < 0 || cx >= cols || cy < 0 || cy > bottom) continue;
+          const idx = cy * cols + cx;
+          if (taken[idx]) continue; // a nearer blade is already here
+          if (glow[idx] > 0) {
+            if (glowZ[idx] >= z) continue; // the firefly is in front of this blade
+            glow[idx] = -1; // this blade is in front of the firefly: hide its light here
+          }
+          taken[idx] = 1;
+          let fg: number;
+          if (far) {
+            g = FAR_MARKS[Math.floor(hash2(x, row + 333, SEED) * 4)];
+            fg = this.grassColor(base, hazeCol, k, tone * 0.85);
+          } else if (s === h - 1 && h > 1) {
+            // The tip: a lighter shade, leaning with the wind (an apostrophe when it is calm)
+            g = tipOffset > 0.6 ? LEAN_RIGHT : tipOffset < -0.6 ? LEAN_LEFT : TIP;
+            fg = this.grassColor(tip, hazeCol, k, tone);
+          } else {
+            if (h <= 2 && s === 0) g = STUB;
+            fg = this.grassColor(base, hazeCol, k, tone * (0.8 + 0.2 * u)); // a little darker at the root
+          }
+          const tile = m.grassTile * z * (0.5 + 0.5 * u);
+          r.push(cx, cy, tile > 0.004 ? pack(base[0], base[1], base[2], tile) : 0, fg, g);
         }
-        r.push(x + off, bottom - k, pack(base[0], base[1], base[2], m.grassTile * (0.5 + 0.5 * u)), fg, g);
-        off = nextOff;
       }
     }
+  }
+
+  /** A grass colour faded toward the haze colour (k is how much grass colour is left) and scaled by tone. */
+  private grassColor(c: readonly number[], hazeCol: readonly number[], k: number, tone: number) {
+    const r = (hazeCol[0] + (c[0] - hazeCol[0]) * k) * tone;
+    const g = (hazeCol[1] + (c[1] - hazeCol[1]) * k) * tone;
+    const b = (hazeCol[2] + (c[2] - hazeCol[2]) * k) * tone;
+    // (clamped: pack() wraps a channel above 255 instead of capping it)
+    return pack(Math.min(255, r), Math.min(255, g), Math.min(255, b), 1);
   }
 }

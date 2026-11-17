@@ -2,6 +2,7 @@
 // that any scene can start (clicks, bites).
 import type { Values } from '../params/schema';
 import type { GlyphRenderer } from '../render/renderer';
+import type { Landscape } from '../render/landscape';
 
 /** Shared state every scene can read. Units are grid cells and seconds. */
 export type World = {
@@ -34,6 +35,11 @@ export interface Scene {
    * Leave it out to use World > Background.
    */
   background?(world: World): string;
+  /**
+   * A landscape (sky gradient, hills, field) for the renderer to paint instead of the flat
+   * background. Return the same object every frame (update it in place) so nothing is allocated.
+   */
+  landscape?(world: World): Landscape | null;
   /** Called when the scene becomes active: (re)spawn its creatures. */
   enter(world: World): void;
   /** Called when the grid size changes, with the scale factor applied to positions. */

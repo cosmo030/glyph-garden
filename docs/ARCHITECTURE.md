@@ -20,7 +20,8 @@ How Glyph Garden is put together, and where to make common changes.
   them; the registry in `src/scenes/index.ts` picks which one is on show. See [Scenes](#scenes).
 - **Simulation** (`src/sim/*` and the active scene) moves the creatures. It runs at a fixed 60 steps
   per second, independent of the screen's refresh rate.
-- **Renderer** (`src/render/*`) draws a grid of character cells with WebGL2.
+- **Renderer** (`src/render/*`) draws a grid of character cells with WebGL2. Behind them it paints a
+  flat colour, or a scene's landscape (sky gradient, hills, field).
 - **Page UI** (`entrypoints/newtab/*`, `src/app.ts`) is plain HTML and CSS on top of the canvas:
   clock, greeting, search box, the scene name (bottom left) and the Tune button (bottom right).
   Served as a website, the same page becomes the demo: see [Website demo](#website-demo).
@@ -38,6 +39,7 @@ src/
   render/
     renderer.ts       WebGL2 glyph-grid renderer
     atlas.ts          draws all characters once into a texture
+    landscape.ts      the Landscape type and the hill shape (mirrored in the background shader)
     color.ts          colour packing helpers
   sim/
     world.ts          shared World type, Scene interface, ripple effects
@@ -125,8 +127,14 @@ Each cell has: grid position, tile colour (with alpha), glyph colour (with alpha
 2. Each frame, the active scene calls `renderer.push(x, y, tileColour, glyphColour, glyph)` for every cell.
    Cells live in one preallocated `ArrayBuffer` (20 bytes per cell). Colours are packed into
    32-bit integers.
-3. `renderer.draw()` paints the background grid, uploads the buffer once and draws all cells with a
+3. `renderer.draw()` paints the background, uploads the buffer once and draws all cells with a
    single instanced draw call. The fragment shader draws a rounded tile and the glyph on top.
+
+The background is one full-screen triangle. It paints a flat colour and the grid lines, or, when the
+active scene returns a `Landscape` from `landscape(world)`, a sky gradient (top to horizon, bent by
+Sky gradient curve), two ranges of rolling hills and a field gradient below the horizon. It is done
+per pixel so the hill lines are smooth. The hill shape is `hillHeight()` in `src/render/landscape.ts`
+and the same formula in the shader, so scene code knows where the hills are; keep the two in step.
 
 A tile colour with alpha 0 draws only the character (used for fins, ripples). Later cells are
 drawn on top of earlier ones.
@@ -177,7 +185,8 @@ See the header comment in `src/scenes/meadow.ts`. In short:
 - **Flash cycle.** Each firefly has a phase from 0 to 1 that advances at its own rate (Flash rate, plus
   or minus Rate spread). The flash is the first Flash length of the cycle: a quick rise, then a slower
   fade. The rest of the cycle it is dark, with only a very faint "•" body (Resting body).
-- **Glow.** Every cell whose centre is within Glow radius R of a flashing firefly gets an intensity
+- **Glow.** Every cell whose centre is within the glow radius R of a flashing firefly (Glow radius for
+  the nearest, less for farther ones) gets an intensity
   `I = flash * (1 - d / R)^2` (d is the distance in cells, so the glow is round), scaled by Glow
   strength. `I` picks a character from dim to bright (`·` `:` `+` `*`) and a faint tile of the firefly
   colour behind it at alpha `I * Glow tile strength`; cells below a small threshold are skipped. The
@@ -190,24 +199,33 @@ See the header comment in `src/scenes/meadow.ts`. In short:
   flashes run through the meadow as waves. Neighbours fall into step over time and the meadow flashes
   in groups; with Coupling 0 each firefly flashes on its own. The rates and the coupling are tuned
   together: a smaller Rate spread makes the groups form faster and tighter.
-- **Movement.** Fireflies live in a low band just above the grass (Firefly band, in cells). Each one
-  drifts on a slowly turning heading (half speed vertically, so they mostly wander sideways), with a
-  spring (Hover pull) toward its own height in the band. That height is stored as a place in the band
-  (0 at its top, 1 at its bottom), so resizing the window or changing Firefly band moves them along.
-  They wrap at the sides and never go into the grass.
+- **Depth.** The field runs from the horizon (depth 0) to the bottom of the screen (depth 1), and
+  every firefly has its own depth. Its ground is the row at that depth, and it hovers above it by up
+  to Hover height, scaled down with distance. Far fireflies are smaller (glow radius and strength
+  shrink with depth), dimmer and slower, so they cross less of the screen, like anything far away.
+- **Movement.** Each firefly drifts on a slowly turning heading (half speed vertically, so they mostly
+  wander sideways), with a spring (Hover pull) toward its hover height. They wrap at the sides and
+  never go into the ground. Heights follow the horizon, so a resized window just moves them along.
 - **Touch.** A tap (a press shorter than Tap length) makes every firefly within Tap flash radius
   flash at once, and the coupling carries the flash outward. A longer press does nothing.
-- **Grass and sky.** The grass is a band of "|", "/" and "\\" blades in two greens (Grass colour and
-  Grass colour (dark), picked per blade), a little darker at the root, on a faint tile (Grass tile
-  strength). Each blade ends in a lighter tip (Grass tip colour) that leans with the wind. The lean
-  follows a slow travelling wind wave (Grass height, density, sway; Wind speed). The background is
-  the scene's own deep blue-black.
-- **Night sky.** Stars fill the sky above the firefly band: mostly faint "·", some "•" and a few
+- **Landscape.** The sky gradient, the far and near hills and the field colour are painted by the
+  renderer (see Renderer); the Meadow hands over its colours, the Horizon line and the hill heights.
+- **Field.** One rank of grass is rooted in every row from a few rows below the screen up to the
+  horizon, drawn front to back. A `taken` map stops farther blades from drawing over nearer ones.
+  For a row at depth z, blades are Grass height times z^1.7 tall (far rows are single small marks:
+  `.` `,` `'` and a backtick), fade toward the horizon sky colour and darken with distance (Distance haze), and sway more
+  the nearer they are. Grass cover goes from the far to the near setting; since a tall blade covers
+  several rows, the chance to root one in a row is 1 - (1 - cover)^(1 / average height), and smooth
+  noise thins it into clumps and gaps. The wind is a wave whose phase grows with the distance
+  1 / (z + 0.15) plus time, so its crests roll from the horizon toward you, times a slow gust
+  envelope (Gusts). The fireflies' light is worked out before the field is drawn: where a blade is
+  nearer than the firefly lighting its cell, the blade wins and that light is hidden; where the
+  firefly is nearer, the blade leaves the cell out.
+- **Night sky.** Stars fill the sky down to the hills: mostly faint "·", some "•" and a few
   bright "+" on a soft tile. Their number is a density (Stars per 1000 sky cells), so big and small
   screens look equally starry. More of them sit high up and the lowest are dimmer, like haze near the
   horizon, and they twinkle slowly (Twinkle). Their places and kinds come from a hash, so none are
-  stored. Behind them, a faint glow of Horizon colour tiles fades upward from the bottom over Horizon
-  glow height. Shooting stars start at a random time around every Shooting star every seconds (the
+  stored. Shooting stars start at a random time around every Shooting star every seconds (the
   first a few seconds after the scene opens) in the upper sky, cross it on a shallow straight path and
   fade within a second: a "*" head, a "-" streak and a "·" tail (Shooting star speed, trail). Up to
   three are kept in small typed arrays.
