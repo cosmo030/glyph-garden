@@ -9,6 +9,11 @@ head to tail, and they alternate between bursts of tail beats and gliding.
 
 Works in Chrome, Brave, Edge and other Chromium browsers, and in Firefox.
 
+**Try it in your browser:** [glyph.cosmo030.com](https://glyph.cosmo030.com) (no install needed)
+
+**Install:** [Chrome Web Store](https://chromewebstore.google.com/detail/cekmbhnigpmoekpfgagcaomeglcabbhf)
+(also for Brave and Edge). The Firefox add-on is in review.
+
 ## Features
 
 - **Scenes**: each habitat is a scene with its own creatures, look and greeting lines. Click the scene
