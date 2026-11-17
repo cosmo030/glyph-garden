@@ -12,6 +12,11 @@ export type World = {
   cursor: { x: number; y: number; active: boolean };
   params: Values;
   effects: Effects;
+  /**
+   * The time of day the page shows (see sim/clock.ts), refreshed once a second: minutes since local
+   * midnight, and the moment itself in milliseconds since 1970.
+   */
+  clock: { minutes: number; epochMs: number };
 };
 
 /** Which part of the day it is, for choosing the wording of a greeting. */

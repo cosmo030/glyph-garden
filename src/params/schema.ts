@@ -131,7 +131,10 @@ export const schema = {
   meadow: {
     label: 'Meadow',
     params: {
-      // The landscape: a sky gradient, two ranges of hills and a field that runs to the horizon
+      // The landscape: a sky gradient, two ranges of hills and a field that runs to the horizon. With
+      // Sky follows the clock on, the colours come from the time of day (scenes/meadow-sky.ts) and
+      // these colour sliders are the look used when it is off.
+      skyClock: bool('Sky follows the clock', true),
       background: color('Sky colour (top)', '#040812'),
       colHorizon: color('Sky colour (horizon)', '#1b2d55'),
       skyCurve: num('Sky gradient curve', 0.3, 4, 0.05, 1.8),

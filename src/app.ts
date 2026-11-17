@@ -19,6 +19,7 @@ import { rgb } from './sim/colors';
 import { Effects, type Scene, type World } from './sim/world';
 import { isDemo, setUpDemo } from './ui/demo';
 import { clockText, greetingFor } from './ui/greeting';
+import { minutesOfDay, now } from './sim/clock';
 
 const STEP = 1 / 60; // simulation runs at a fixed 60 steps per second
 
@@ -47,7 +48,17 @@ export async function start() {
     cursor: { x: 0, y: 0, active: false },
     params: values,
     effects: new Effects(),
+    clock: { minutes: 0, epochMs: 0 },
   };
+  // The time of day for scenes that follow it, refreshed once a second (outside the frame loop, so
+  // the loop never has to make a Date)
+  function updateClock() {
+    const d = now();
+    world.clock.minutes = minutesOfDay(d);
+    world.clock.epochMs = d.getTime();
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
   const stats: Stats = { fps: 0, cells: 0, animals: 0 };
 
   // ---- Scenes ----------------------------------------------------------------
@@ -81,9 +92,9 @@ export async function start() {
   /** Refreshes everything on the page that depends on the time, the active scene or Page settings. */
   function updatePage() {
     const p = values.page;
-    const now = new Date();
-    clockEl.textContent = clockText(now);
-    greetingEl.textContent = greetingFor(now, p.name, active.greetings);
+    const d = now();
+    clockEl.textContent = clockText(d);
+    greetingEl.textContent = greetingFor(d, p.name, active.greetings);
     document.documentElement.style.setProperty('--glass-blur', `${p.searchBlur}px`);
     document.documentElement.style.setProperty('--glass-tint', String(p.searchOpacity));
 
@@ -102,7 +113,7 @@ export async function start() {
   let tickTimer: ReturnType<typeof setTimeout> | undefined;
   function scheduleTick() {
     clearTimeout(tickTimer);
-    const d = new Date();
+    const d = now();
     const untilNextMinute = 60_000 - (d.getSeconds() * 1000 + d.getMilliseconds());
     tickTimer = setTimeout(() => {
       updatePage();
