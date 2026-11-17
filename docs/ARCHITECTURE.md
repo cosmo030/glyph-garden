@@ -45,11 +45,13 @@ src/
     world.ts          shared World type, Scene interface, ripple effects
     effects-draw.ts   draws ripples
     noise.ts          hashing and smooth noise
+    clock.ts          the time of day the page shows (and the ?at= override)
     colors.ts         cached hex-to-RGB parsing
   scenes/
     index.ts          the scene registry (the order the name button cycles through)
     pond.ts           the Pond scene: koi movement, feeding, drawing
-    meadow.ts         the Meadow scene (night): fireflies, grass, stars
+    meadow.ts         the Meadow scene (night): fireflies, field, sky
+    meadow-sky.ts     the Meadow's colours through the day (keyframes)
   ui/
     greeting.ts       the clock text, and picking a greeting from the scene's lines
     demo.ts           the website demo: adds the top bar with store links
@@ -214,6 +216,13 @@ See the header comment in `src/scenes/meadow.ts`. In short:
   flash at once, and the coupling carries the flash outward. A longer press does nothing.
 - **Landscape.** The sky gradient, the far and near hills and the field colour are painted by the
   renderer (see Renderer); the Meadow hands over its colours, the Horizon line and the hill heights.
+- **Sky follows the clock** (on by default). The colours come from keyframes through the day in
+  `src/scenes/meadow-sky.ts`: sky top and horizon, far and near hills, field far and near, and star
+  visibility. Between two keyframes they blend with a smoothstep. Dusk warms the horizon and deepens
+  the sky, it is darkest after midnight, a faint warm line comes back before dawn, and by day the sky
+  is a soft, muted blue without stars (so the white page text stays readable). Far grass fades into
+  the current horizon colour, stars dim with star visibility, and shooting stars only start when it
+  is above 0.4. With the setting off, the colour sliders are used and the stars are always on.
 - **Field.** One rank of grass is rooted in every row from a few rows below the screen up to the
   horizon, drawn front to back. A `taken` map stops farther blades from drawing over nearer ones.
   For a row at depth z, blades are Grass height times z^1.7 tall (far rows are single small marks:
@@ -273,7 +282,13 @@ Settings are saved under one key. In the extension they go to `chrome.storage.lo
 Firefox both support it); on the web preview they go to `localStorage`. Loading ignores unknown keys
 and clamps numbers to the slider range, so old or hand-edited settings can't break the page.
 
-## Testing hook
+## Testing hooks
 
 Opening the page with `?debug` in its URL (for example the web preview at `index.html?debug`) exposes `window.__gg = { world, scenes }`
 so automated screenshots can place creatures precisely. It has no effect in normal use.
+
+`?at=2026-11-20T05:30` sets the page's clock to that moment (it keeps running from there), so the
+time-of-day looks can be checked without waiting: the clock and greeting, the Meadow's sky. It goes
+through `now()` in `src/sim/clock.ts`; everything that shows the time reads it there. The world gets
+the time once a second as `world.clock` (minutes since midnight, and the moment in milliseconds), so
+scenes never make a `Date` in the frame loop.

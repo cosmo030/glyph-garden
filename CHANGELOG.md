@@ -26,6 +26,11 @@ All notable changes are listed here. The format follows
   and near, Distance haze, Gusts).
 - Fireflies have a depth in the field: far ones are small, dim and slow, near ones hover higher and
   glow a little wider. Grass in front of a firefly hides it.
+- The Meadow's sky follows the clock: a warm dusk, the darkest sky after midnight, a faint warm line
+  before dawn, a soft blue by day; the stars fade in and out with it (Sky follows the clock, on by
+  default; turn it off to use the colour sliders).
+- Add `?at=2026-11-20T05:30` to the URL to set the page's clock to that moment, for checking the
+  time-of-day looks.
 - Stray fireflies: now and then one drifts up out of the field into the low sky and fades away, and a
   new one fades in somewhere over the field (Strays per minute, Stray rise, Stray time).
 

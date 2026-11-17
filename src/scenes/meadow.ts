@@ -2,6 +2,7 @@ import type { GlyphRenderer } from '../render/renderer';
 import { pack, packRgb, packShade } from '../render/color';
 import { glyph } from '../render/atlas';
 import { HILL_SEEDS, hillHeight, type Landscape } from '../render/landscape';
+import { makeSkyColors, skyAt } from './meadow-sky';
 import { hash2, noise2, gauss, rand } from '../sim/noise';
 import { rgb } from '../sim/colors';
 import type { Band, Scene, World } from '../sim/world';
@@ -9,7 +10,8 @@ import type { Band, Scene, World } from '../sim/world';
 // The Meadow scene: a clear night over a field that runs to the horizon, with fireflies above it.
 //
 // The landscape (a sky gradient, two ranges of rolling hills and the field) is painted by the
-// renderer's background pass, so its edges are smooth. On top of it, the field is rows of grass from
+// renderer's background pass, so its edges are smooth. Its colours follow the time of day: a warm dusk,
+// the darkest sky after midnight, a faint warm line before dawn (see meadow-sky.ts). On top of it, the field is rows of grass from
 // the horizon to the bottom of the screen. A row's depth z runs from 0 at the horizon to 1 at the
 // bottom: far rows are tiny hazy marks that barely move, near rows are tall blades that sway, and gusts
 // of wind roll through the field toward you. Above the hills: stars that twinkle slowly, and now and
@@ -142,6 +144,10 @@ export class Meadow implements Scene {
   private sDist = new Float32Array(SHOOT_CAP);
   private nextShoot = 0; // world time of the next shooting star
 
+  // The colours of the moment when the sky follows the clock, and how visible the stars are (0 to 1)
+  private skyNow = makeSkyColors();
+  private starVis = 1;
+
   // The landscape handed to the renderer, updated in place every frame (no allocation)
   private land: Landscape = {
     skyTop: [0, 0, 0],
@@ -180,21 +186,41 @@ export class Meadow implements Scene {
     return world.params.meadow.background;
   }
 
-  /** The sky, hills and field for the renderer's background pass, from the Meadow settings. */
+  /** The sky, hills and field for the renderer's background pass. */
   landscape(world: World): Landscape {
+    this.updateLand(world);
+    return this.land;
+  }
+
+  /**
+   * Fills in the landscape: colours from the time of day when Sky follows the clock is on, otherwise
+   * from the colour sliders. Also sets how visible the stars are.
+   */
+  private updateLand(world: World) {
     const m = world.params.meadow;
     const l = this.land;
-    l.skyTop = rgb(m.background);
-    l.skyHorizon = rgb(m.colHorizon);
+    if (m.skyClock) {
+      const s = skyAt(world.clock.minutes, this.skyNow);
+      l.skyTop = s.top;
+      l.skyHorizon = s.horizon;
+      l.hillFar = s.hillFar;
+      l.hillNear = s.hillNear;
+      l.groundFar = s.groundFar;
+      l.groundNear = s.groundNear;
+      this.starVis = s.stars;
+    } else {
+      l.skyTop = rgb(m.background);
+      l.skyHorizon = rgb(m.colHorizon);
+      l.hillFar = rgb(m.colHillFar);
+      l.hillNear = rgb(m.colHillNear);
+      l.groundFar = rgb(m.colGroundFar);
+      l.groundNear = rgb(m.colGroundNear);
+      this.starVis = 1;
+    }
     l.skyCurve = m.skyCurve;
     l.horizon = this.horizon(world);
     l.farHills = m.farHills;
     l.nearHills = m.nearHills;
-    l.hillFar = rgb(m.colHillFar);
-    l.hillNear = rgb(m.colHillNear);
-    l.groundFar = rgb(m.colGroundFar);
-    l.groundNear = rgb(m.colGroundNear);
-    return l;
   }
 
   // ---- Where things are -------------------------------------------------------------------------
@@ -394,7 +420,7 @@ export class Meadow implements Scene {
     const m = world.params.meadow;
     if (world.time >= this.nextShoot) {
       this.nextShoot = world.time + m.shootEvery * rand(0.5, 1.5);
-      if (this.sn < SHOOT_CAP) {
+      if (this.sn < SHOOT_CAP && this.starVis > 0.4) {
         const sky = this.horizon(world) - m.farHills; // the top of the hills, roughly
         const cols = world.cols;
         let x0: number;
@@ -461,6 +487,7 @@ export class Meadow implements Scene {
    * worked out first so the field can leave out the cells where a firefly is in front of the grass.
    */
   draw(r: GlyphRenderer, world: World) {
+    this.updateLand(world);
     this.fitMaps(world);
     this.drawStars(r, world);
     this.drawShootingStars(r, world);
@@ -597,6 +624,8 @@ export class Meadow implements Scene {
   private drawStars(r: GlyphRenderer, world: World) {
     const m = world.params.meadow;
     const col = rgb(m.colStar);
+    const vis = this.starVis;
+    if (vis < 0.01) return; // daytime: no stars
     const skyRows = Math.max(1, this.horizon(world) - m.farHills * 0.55 - 1);
     // A density rather than a count, so a big screen gets as starry a sky as a small one
     const count = Math.min(MAX_STARS, Math.round((m.starDensity / 1000) * world.cols * skyRows));
@@ -608,7 +637,7 @@ export class Meadow implements Scene {
       if (y >= this.skyFloor(world, x + 0.5) - 1) continue; // behind the hills
       const rate = 0.2 + hash2(i, 2, SEED) * 0.6; // slow: a calm sky, not a flickering one
       const tw = 1 - m.twinkle * (0.5 + 0.5 * Math.sin(world.time * rate + hash2(i, 3, SEED) * TAU));
-      const haze = 1 - 0.55 * u; // the lowest stars are a little dimmer
+      const haze = (1 - 0.55 * u) * vis; // the lowest stars are a little dimmer; all fade by day
       const kind = hash2(i, 8, SEED);
       if (kind >= STAR_BRIGHT_FROM) {
         r.push(x, y, packRgb(col, 0.08 * tw * haze), packRgb(col, tw * haze), STAR_BRIGHT);
@@ -675,7 +704,7 @@ export class Meadow implements Scene {
     const dark = rgb(m.colGrassDark);
     const mid = rgb(m.colGrass);
     const tip = rgb(m.colGrassTip);
-    const hazeCol = rgb(m.colHorizon);
+    const hazeCol = this.land.skyHorizon; // far grass fades into the sky at the horizon
     const t = world.time * m.windSpeed;
     const taken = this.taken;
     taken.fill(0);
