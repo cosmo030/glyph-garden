@@ -135,6 +135,17 @@ export class Meadow implements Scene {
   private tn = 0;
   private taken = new Uint8Array(0);
 
+  // The field's blades, front to back, cached by fitField (only the wind changes per frame)
+  private bladeN = 0;
+  private bladeX = new Int16Array(0);
+  private bladeRow = new Int16Array(0);
+  private bladeZ = new Float32Array(0);
+  private bladeH = new Uint8Array(0);
+  private bladeDark = new Uint8Array(0); // 1 for the dark green, 0 for the other
+  private bladeTone = new Float32Array(0);
+  private bladeMark = new Uint8Array(0); // which small mark a far blade is
+  private fieldKey = [NaN, NaN, NaN, NaN, NaN, NaN]; // what the cache was made for
+
   // The press that may become a tap
   private pressed = false;
   private pressedAt = 0;
@@ -895,9 +906,7 @@ export class Meadow implements Scene {
    * The field: one rank of grass rooted in every row from the bottom of the screen up to the horizon,
    * drawn front to back so nearer blades hide the ones behind them (`taken`). For a row at depth z:
    * - blades get taller (Grass height times z^1.7), so far rows are single marks;
-   * - how much of the ground the grass covers goes from Grass density (far) to (near). A tall blade
-   *   covers several rows, so the chance to root a blade in a row is lowered to match:
-   *   p = 1 - (1 - cover)^(1 / average height). Smooth noise then thins it into clumps and gaps;
+   * - where blades grow comes from fitField (cached, see there);
    * - the colour fades into the horizon sky with distance (Distance haze), and gets darker;
    * - sway grows with z, so the far field is still and the near grass moves most;
    * - the wind is a wave whose crests move from the horizon toward you (its phase grows with the
@@ -910,6 +919,7 @@ export class Meadow implements Scene {
     const bottom = Math.floor(world.rows) - 1;
     const top = Math.ceil(this.horizon(world));
     if (m.grassHeight <= 0 || top > bottom) return;
+    this.fitField(world, cols, top, bottom);
     const dark = rgb(m.colGrassDark);
     const mid = rgb(m.colGrass);
     const tip = rgb(m.colGrassTip);
@@ -920,64 +930,130 @@ export class Meadow implements Scene {
     const glow = this.glow;
     const glowZ = this.glowZ;
 
-    // Start a few rows below the screen: blades rooted there still reach up into view, so the nearest
-    // grass fills the bottom edge the way it would in a real field
+    // Per-row values, worked out again only when the row changes (the blades come front to back)
+    let lastRow = -1;
+    let k = 0;
+    let dist = 0;
+    let sway = 0;
+    for (let b = 0; b < this.bladeN; b++) {
+      const row = this.bladeRow[b]!;
+      const z = this.bladeZ[b]!;
+      if (row !== lastRow) {
+        lastRow = row;
+        // Mix toward the haze colour with distance, and darken: k is how much of the grass colour is left
+        k = 1 - m.haze * Math.pow(1 - z, 1.5);
+        dist = 1 / (z + 0.15);
+        sway = m.grassSway * Math.pow(z, 1.5);
+      }
+      const x = this.bladeX[b]!;
+      const h = this.bladeH[b]!;
+      const base = this.bladeDark[b] ? dark : mid;
+      const tone = this.bladeTone[b]!;
+      const far = z < FAR_UNTIL;
+      const gust = 1 - m.gusts + m.gusts * (0.5 + 0.5 * Math.sin(t * 0.23 + x * 0.013));
+      const wind = (Math.sin(x * 0.06 + dist * 1.1 + t * 1.4) + 0.5 * Math.sin(x * 0.021 - t * 0.5)) * gust;
+      const tipOffset = sway * wind * 0.35 * h;
+      let off = 0;
+      for (let s = 0; s < h; s++) {
+        const u = (s + 1) / h;
+        const nextOff = Math.round(tipOffset * u * u); // blades bend more toward the tip
+        const cx = x + off;
+        const cy = row - s;
+        // The blade leans the way its next cell steps
+        let g = nextOff > off ? LEAN_RIGHT : nextOff < off ? LEAN_LEFT : BLADE;
+        off = nextOff;
+        if (cx < 0 || cx >= cols || cy < 0 || cy > bottom) continue;
+        const idx = cy * cols + cx;
+        if (taken[idx]) continue; // a nearer blade is already here
+        if (glow[idx] > 0) {
+          if (glowZ[idx] >= z) continue; // the firefly is in front of this blade
+          glow[idx] = -1; // this blade is in front of the firefly: hide its light here
+        }
+        taken[idx] = 1;
+        let fg: number;
+        if (far) {
+          g = FAR_MARKS[this.bladeMark[b]!];
+          fg = this.grassColor(base, hazeCol, k, tone * 0.85);
+        } else if (s === h - 1 && h > 1) {
+          // The tip: a lighter shade, leaning with the wind (an apostrophe when it is calm)
+          g = tipOffset > 0.6 ? LEAN_RIGHT : tipOffset < -0.6 ? LEAN_LEFT : TIP;
+          fg = this.grassColor(tip, hazeCol, k, tone);
+        } else {
+          if (h <= 2 && s === 0) g = STUB;
+          fg = this.grassColor(base, hazeCol, k, tone * (0.8 + 0.2 * u)); // a little darker at the root
+        }
+        const tile = m.grassTile * z * (0.5 + 0.5 * u);
+        r.push(cx, cy, tile > 0.004 ? pack(base[0], base[1], base[2], tile) : 0, fg, g);
+      }
+    }
+  }
+
+  /**
+   * Works out where the blades grow and caches them, front to back: their root, depth, height,
+   * green, tone and (far away) which small mark they are. None of this changes from frame to frame
+   * (only the wind does), and the noise and hashes behind it are the costly part, so it is only
+   * redone when the grid or a grass setting changes.
+   *
+   * Grass cover goes from Grass cover (far) to (near). A tall blade covers several rows, so the
+   * chance to root a blade in a row is lowered to match: p = 1 - (1 - cover)^(1 / average height).
+   * Smooth noise then thins it into clumps and gaps. Rooting starts a few rows below the screen:
+   * blades rooted there still reach up into view, so the nearest grass fills the bottom edge.
+   */
+  private fitField(world: World, cols: number, top: number, bottom: number) {
+    const m = world.params.meadow;
+    const key = this.fieldKey;
+    if (
+      key[0] === cols &&
+      key[1] === top &&
+      key[2] === bottom &&
+      key[3] === m.grassHeight &&
+      key[4] === m.grassDensity &&
+      key[5] === m.farGrass
+    )
+      return;
+    key[0] = cols;
+    key[1] = top;
+    key[2] = bottom;
+    key[3] = m.grassHeight;
+    key[4] = m.grassDensity;
+    key[5] = m.farGrass;
+
     const below = Math.ceil(m.grassHeight * 0.6);
+    const room = cols * (bottom + below - top + 1);
+    if (this.bladeX.length < room) {
+      this.bladeX = new Int16Array(room);
+      this.bladeRow = new Int16Array(room);
+      this.bladeZ = new Float32Array(room);
+      this.bladeH = new Uint8Array(room);
+      this.bladeDark = new Uint8Array(room);
+      this.bladeTone = new Float32Array(room);
+      this.bladeMark = new Uint8Array(room);
+    }
+    let n = 0;
     for (let row = bottom + below; row >= top; row--) {
       const z = Math.min(1, (row - top) / Math.max(1, bottom - top));
       const far = z < FAR_UNTIL;
       const tall = m.grassHeight * Math.pow(z, 1.7);
       const cover = m.farGrass + (m.grassDensity - m.farGrass) * z;
       const plant = 1 - Math.pow(1 - Math.min(0.99, cover), 1 / Math.max(1, far ? 1 : tall * 0.675));
-      // Mix toward the haze colour with distance, and darken: k is how much of the grass colour is left
-      const k = 1 - m.haze * Math.pow(1 - z, 1.5);
       const light = 0.35 + 0.65 * z;
-      const dist = 1 / (z + 0.15);
-      const sway = m.grassSway * Math.pow(z, 1.5);
       for (let x = 0; x < cols; x++) {
         // Clumps: noise that is wide across and, further away, squeezed into fewer rows
         const clump = noise2(x * 0.09, row * (0.15 + 0.35 * (1 - z)), SEED + 1);
         if (hash2(x, row, SEED) > plant * (0.25 + 1.5 * clump * clump)) continue; // no blade rooted here
-        const h = far ? 1 : Math.max(1, Math.round(tall * (0.35 + 0.65 * hash2(x, row + 999, SEED))));
-        const base = hash2(x, row + 555, SEED) < 0.5 ? dark : mid;
-        const tone = (0.9 + 0.2 * hash2(x, row + 777, SEED)) * light;
-        const gust = 1 - m.gusts + m.gusts * (0.5 + 0.5 * Math.sin(t * 0.23 + x * 0.013));
-        const wind = (Math.sin(x * 0.06 + dist * 1.1 + t * 1.4) + 0.5 * Math.sin(x * 0.021 - t * 0.5)) * gust;
-        const tipOffset = sway * wind * 0.35 * h;
-        let off = 0;
-        for (let s = 0; s < h; s++) {
-          const u = (s + 1) / h;
-          const nextOff = Math.round(tipOffset * u * u); // blades bend more toward the tip
-          const cx = x + off;
-          const cy = row - s;
-          // The blade leans the way its next cell steps
-          let g = nextOff > off ? LEAN_RIGHT : nextOff < off ? LEAN_LEFT : BLADE;
-          off = nextOff;
-          if (cx < 0 || cx >= cols || cy < 0 || cy > bottom) continue;
-          const idx = cy * cols + cx;
-          if (taken[idx]) continue; // a nearer blade is already here
-          if (glow[idx] > 0) {
-            if (glowZ[idx] >= z) continue; // the firefly is in front of this blade
-            glow[idx] = -1; // this blade is in front of the firefly: hide its light here
-          }
-          taken[idx] = 1;
-          let fg: number;
-          if (far) {
-            g = FAR_MARKS[Math.floor(hash2(x, row + 333, SEED) * 4)];
-            fg = this.grassColor(base, hazeCol, k, tone * 0.85);
-          } else if (s === h - 1 && h > 1) {
-            // The tip: a lighter shade, leaning with the wind (an apostrophe when it is calm)
-            g = tipOffset > 0.6 ? LEAN_RIGHT : tipOffset < -0.6 ? LEAN_LEFT : TIP;
-            fg = this.grassColor(tip, hazeCol, k, tone);
-          } else {
-            if (h <= 2 && s === 0) g = STUB;
-            fg = this.grassColor(base, hazeCol, k, tone * (0.8 + 0.2 * u)); // a little darker at the root
-          }
-          const tile = m.grassTile * z * (0.5 + 0.5 * u);
-          r.push(cx, cy, tile > 0.004 ? pack(base[0], base[1], base[2], tile) : 0, fg, g);
-        }
+        this.bladeX[n] = x;
+        this.bladeRow[n] = row;
+        this.bladeZ[n] = z;
+        this.bladeH[n] = far
+          ? 1
+          : Math.min(255, Math.max(1, Math.round(tall * (0.35 + 0.65 * hash2(x, row + 999, SEED)))));
+        this.bladeDark[n] = hash2(x, row + 555, SEED) < 0.5 ? 1 : 0;
+        this.bladeTone[n] = (0.9 + 0.2 * hash2(x, row + 777, SEED)) * light;
+        this.bladeMark[n] = Math.floor(hash2(x, row + 333, SEED) * 4);
+        n++;
       }
     }
+    this.bladeN = n;
   }
 
   /** A grass colour faded toward the haze colour (k is how much grass colour is left) and scaled by tone. */

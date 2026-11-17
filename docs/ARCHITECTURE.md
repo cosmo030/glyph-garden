@@ -229,7 +229,10 @@ See the header comment in `src/scenes/meadow.ts`. In short:
   `.` `,` `'` and a backtick), fade toward the horizon sky colour and darken with distance (Distance haze), and sway more
   the nearer they are. Grass cover goes from the far to the near setting; since a tall blade covers
   several rows, the chance to root one in a row is 1 - (1 - cover)^(1 / average height), and smooth
-  noise thins it into clumps and gaps. The wind is a wave whose phase grows with the distance
+  noise thins it into clumps and gaps. Where the blades grow (root, depth, height, green, tone, far
+  mark) never changes from frame to frame, and its noise and hashes are the costly part, so
+  `fitField` caches it in typed arrays, front to back, and only redoes it when the grid or a grass
+  setting changes; each frame then only works out the wind per blade. The wind is a wave whose phase grows with the distance
   1 / (z + 0.15) plus time, so its crests roll from the horizon toward you, times a slow gust
   envelope (Gusts). The fireflies' light is worked out before the field is drawn: where a blade is
   nearer than the firefly lighting its cell, the blade wins and that light is hidden; where the
