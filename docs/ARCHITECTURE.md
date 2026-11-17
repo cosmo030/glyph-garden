@@ -239,7 +239,14 @@ See the header comment in `src/scenes/meadow.ts`. In short:
   screens look equally starry. More of them sit high up and the lowest are dimmer, like haze near the
   horizon, and they twinkle slowly (Twinkle). The sky drifts from left to right by Star drift cells
   per minute, wrapping round, the way the night sky turns; the shift is taken from the time of day, so
-  the stars stand in the same place at the same hour. Their places and kinds come from a hash, so none are
+  the stars stand in the same place at the same hour.
+- **Milky Way.** A soft band behind the stars, from near the horizon on the left to high on the
+  right, in sky coordinates that drift and wrap with the stars. It fades out toward both ends
+  (sin(pi u)^0.6 across the screen), so the wrap never shows. Across the band the haze falls off like
+  a Gaussian, smooth noise makes it clumpy and a darker dust lane runs just off its middle. Each cell
+  gets a faint tile (Milky Way) and, by a hash, maybe one dim star of its own (Milky Way stars). The
+  noise is too costly per frame, so the cells are worked out into typed arrays and cached; they are
+  rebuilt only when the sky has drifted a whole cell, or the grid or a setting it uses changes. Their places and kinds come from a hash, so none are
   stored. Shooting stars start at a random time around every Shooting star every seconds (the
   first a few seconds after the scene opens). About two in three come in over the top edge (fairly
   steep, mostly heading toward the middle), the rest over a side edge in the upper sky (flatter). Each
