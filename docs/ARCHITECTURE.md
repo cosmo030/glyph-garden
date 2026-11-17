@@ -206,6 +206,10 @@ See the header comment in `src/scenes/meadow.ts`. In short:
 - **Movement.** Each firefly drifts on a slowly turning heading (half speed vertically, so they mostly
   wander sideways), with a spring (Hover pull) toward its hover height. They wrap at the sides and
   never go into the ground. Heights follow the horizon, so a resized window just moves them along.
+- **Strays.** About Strays per minute (across the whole swarm), a firefly starts to stray: its hover
+  height eases upward by up to Stray rise over Stray time, and it fades out over the last 40% of that
+  time. Then it is placed somewhere new over the field and fades in over a few seconds. So the top of
+  the swarm never looks cut off, and the count stays the same.
 - **Touch.** A tap (a press shorter than Tap length) makes every firefly within Tap flash radius
   flash at once, and the coupling carries the flash outward. A longer press does nothing.
 - **Landscape.** The sky gradient, the far and near hills and the field colour are painted by the

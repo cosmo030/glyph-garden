@@ -17,7 +17,8 @@ import type { Band, Scene, World } from '../sim/world';
 //
 // Every firefly has a depth too. Far ones are tiny, dim and slow (they cross less of the screen, like
 // anything far away); near ones hover higher, glow wider and move faster. Grass that is nearer than a
-// firefly hides it.
+// firefly hides it. Now and then one strays: it drifts up out of the field into the low sky and fades
+// away, and a new one fades in somewhere over the field, so the top of the swarm never looks cut off.
 //
 // Each firefly has a flash cycle, a "phase" that runs from 0 to 1 at its own rate; the flash is the
 // first part of the cycle (a quick rise, a slower fade) and it is dark for the rest.
@@ -103,6 +104,8 @@ export class Meadow implements Scene {
   private pace = new Float32Array(CAP); // personal speed factor
   private phase = new Float32Array(CAP); // flash cycle, 0 to 1; the flash is the first part
   private rateJ = new Float32Array(CAP); // personal flash rate offset, -1 to 1 (times Rate spread)
+  private strayT = new Float32Array(CAP); // seconds since it started to stray, 0 while it stays
+  private vis = new Float32Array(CAP); // how visible it is, 0 to 1: strays fade out, newcomers fade in
 
   // Fireflies that flashed this step and still have to nudge their neighbours
   private queue = new Int32Array(CAP);
@@ -114,6 +117,7 @@ export class Meadow implements Scene {
   // clearing is cheap. `taken` marks cells the field has already drawn a blade in.
   private glow = new Float32Array(0);
   private glowZ = new Float32Array(0);
+  private glowA = new Float32Array(0); // a firefly's own cell: how visible it is (strays fading)
   private touched = new Int32Array(0);
   private tn = 0;
   private taken = new Uint8Array(0);
@@ -231,6 +235,13 @@ export class Meadow implements Scene {
   /** Adds one firefly somewhere over the field, with a random depth, phase and pace. */
   private spawn(world: World) {
     const i = this.n++;
+    this.place(world, i);
+    this.vis[i] = 1;
+  }
+
+  /** Puts firefly i at a new random spot over the field (a newcomer, or a stray coming back). */
+  private place(world: World, i: number) {
+    this.strayT[i] = 0;
     // More of them in the middle and near part of the field, where there is room to see them
     this.depth[i] = 0.06 + 0.94 * Math.pow(Math.random(), 0.75);
     this.home[i] = Math.random();
@@ -308,6 +319,23 @@ export class Meadow implements Scene {
 
     this.stepShootingStars(dt, world);
 
+    // ---- Strays: now and then one starts to drift up; when its time is up it comes back as a newcomer ----
+    const strayChance = (m.strayRate / 60) * dt; // per firefly per step, so Strays per minute overall
+    for (let i = 0; i < n; i++) {
+      if (this.strayT[i] > 0) {
+        this.strayT[i] += dt;
+        // Fade out over the last 40% of the stray time
+        this.vis[i] = Math.min(1, (1 - this.strayT[i] / m.strayTime) / 0.4);
+        if (this.strayT[i] >= m.strayTime) {
+          this.place(world, i);
+          this.vis[i] = 0; // and fade in from nothing at its new spot
+        }
+      } else {
+        if (this.vis[i] < 1) this.vis[i] = Math.min(1, this.vis[i] + dt / 2.5);
+        else if (Math.random() < strayChance / Math.max(1, n)) this.strayT[i] = dt;
+      }
+    }
+
     // ---- Movement ----
     const sqrtDt = Math.sqrt(dt);
     const wanderDecay = Math.exp(-0.5 * dt);
@@ -324,7 +352,12 @@ export class Meadow implements Scene {
       // A spring toward its hover height above its own spot in the field (Hover pull). Half the
       // vertical drift, so they mostly wander sideways, the way fireflies over a field do.
       const ground = this.groundAt(world, this.depth[i]);
-      const homeY = ground - this.hoverAt(world, i);
+      let homeY = ground - this.hoverAt(world, i);
+      if (this.strayT[i] > 0) {
+        // A stray's home rises slowly (eased), so it lifts off gently and keeps climbing
+        const e = Math.min(1, this.strayT[i] / m.strayTime);
+        homeY -= m.strayRise * (0.3 + 0.7 * this.depth[i]) * e * e * (3 - 2 * e);
+      }
       const tx = Math.cos(this.heading[i]) * speed;
       const ty = Math.sin(this.heading[i]) * speed * 0.5 + (homeY - this.y[i]) * m.hover;
       this.vx[i] += (tx - this.vx[i]) * relax;
@@ -412,6 +445,7 @@ export class Meadow implements Scene {
     if (this.glow.length !== size) {
       this.glow = new Float32Array(size);
       this.glowZ = new Float32Array(size);
+      this.glowA = new Float32Array(size);
       this.touched = new Int32Array(size);
       this.taken = new Uint8Array(size);
     }
@@ -428,6 +462,7 @@ export class Meadow implements Scene {
     const rows = Math.ceil(world.rows);
     const glow = this.glow;
     const glowZ = this.glowZ;
+    const glowA = this.glowA;
     const touched = this.touched;
     this.tn = 0;
 
@@ -440,7 +475,9 @@ export class Meadow implements Scene {
       const py = this.y[i];
       const cx = Math.floor(px);
       const cy = Math.floor(py);
-      const flash = p >= L ? 0 : p < rise ? p / rise : Math.pow(1 - (p - rise) / (L - rise), 1.6);
+      const a = this.vis[i];
+      if (a < 0.02) continue; // faded out completely
+      const flash = (p >= L ? 0 : p < rise ? p / rise : Math.pow(1 - (p - rise) / (L - rise), 1.6)) * a;
       // Ramp cells: I = flash * (1 - d / R)^2 for every cell centre within R of the firefly
       const R = m.glowRadius * (0.25 + 0.75 * z);
       const strength = m.glowStrength * (0.4 + 0.6 * z);
@@ -479,6 +516,7 @@ export class Meadow implements Scene {
         if (1 + flash > was) {
           glow[idx] = 1 + flash;
           glowZ[idx] = z;
+          glowA[idx] = a;
         }
       }
     }
@@ -506,7 +544,8 @@ export class Meadow implements Scene {
       if (v >= 1) {
         const f = v - 1;
         if (f < 0.02) {
-          r.push(gx, gy, 0, packShade(col, -0.35, m.restGlow * (0.4 + 0.6 * z)), CORE); // dark: a faint body
+          // dark: a faint body (fading with a stray)
+          r.push(gx, gy, 0, packShade(col, -0.35, m.restGlow * (0.4 + 0.6 * z) * this.glowA[idx]), CORE);
         } else {
           const tile = m.coreTile * (0.2 + 0.8 * z) * (0.4 + 0.6 * f);
           r.push(gx, gy, packShade(col, 0.2 * f, tile), packShade(col, 0.6 + 0.35 * f, 0.5 + 0.5 * f), CORE);
