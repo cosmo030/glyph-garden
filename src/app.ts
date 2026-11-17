@@ -273,6 +273,8 @@ function search(q: string) {
   if (searchApi?.query) {
     void searchApi.query({ text: q, disposition: 'CURRENT_TAB' });
   } else {
-    window.location.href = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+    // Served as a website (the demo) there is no search API. Open the results in a new tab so the
+    // garden stays open; this runs inside the submit event, so popup blockers allow it.
+    window.open(`https://www.google.com/search?q=${encodeURIComponent(q)}`, '_blank', 'noopener');
   }
 }

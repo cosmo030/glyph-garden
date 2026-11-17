@@ -50,7 +50,7 @@ src/
     meadow.ts         the Meadow scene (night): fireflies, grass, stars
   ui/
     greeting.ts       the clock text, and picking a greeting from the scene's lines
-    demo.ts           the website demo: hides the search box, adds the top bar with store links
+    demo.ts           the website demo: adds the top bar with store links
 public/icon/          the extension icon PNGs (16, 32, 48, 128), made from art/icon.svg
 art/                  icon.svg, the source of the icon
 scripts/              make-icons.mjs and store-assets.mjs (Node only, driving a local Chromium browser)
@@ -75,10 +75,12 @@ deploys that to [glyph.cosmo030.com](https://glyph.cosmo030.com) on every push t
 (`vercel.json` holds the build command and output folder).
 
 When the page is not running inside the extension (no `runtime.id`), `src/ui/demo.ts` turns it into
-the demo: the search box is hidden, the hint is on by default, and a thin bar at the top links to the
-stores, the source and cosmo030.com. The store links live in `GET_LINKS` in that file. The website's
-title, description and favicon are added by a small plugin in `vite.preview.config.ts`, so the
-extension keeps "New Tab" as its title.
+the demo: the hint is on by default, and a thin bar at the top links to the stores, the source and
+cosmo030.com. The store links live in `GET_LINKS` in that file. The search box stays, since it is what
+makes the page read as a new tab; with no search API it opens a Google search in a new tab (see
+`search()` in `src/app.ts`). A small plugin in `vite.preview.config.ts` adds the website's title,
+description and favicon and removes the search box's `autofocus`, so arrow keys switch scenes right
+away. The extension keeps "New Tab" as its title and its autofocus.
 
 Add `?newtab` to the URL to see the plain new-tab look on the website. `npm run store:assets` does
 this, so the store screenshots show the page as the extension does.

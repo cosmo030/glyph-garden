@@ -43,9 +43,9 @@ into the add-on; nothing is minified by hand or generated outside the build.
   read the pages the user visits.
 
 One thing a reviewer may notice in `src/app.ts`: if neither `browser.search` nor `chrome.search` exists,
-the search box falls back to a plain Google search URL. That path exists only for the plain-website
-preview used for development (`npm run preview:serve`); inside the add-on the search API is always
-there, so it never runs.
+the search box opens a plain Google search URL in a new tab. That path exists only for the page served
+as a plain website (the development preview, `npm run preview:serve`, and the public demo at
+glyph.cosmo030.com); inside the add-on the search API is always there, so it never runs.
 
 ## Testing
 

@@ -9,8 +9,9 @@ All notable changes are listed here. The format follows
 ### Added
 
 - A website demo at glyph.cosmo030.com: the garden runs in any browser without installing anything.
-  There the search box is hidden, the hint is on by default, and a thin bar at the top links to the
-  Chrome Web Store, the source and cosmo030.com. The extension itself looks the same as before.
+  There the hint is on by default, a thin bar at the top links to the Chrome Web Store, the source
+  and cosmo030.com, and the search box doesn't take focus on load and opens results in a new tab so
+  the garden stays open. The extension itself works the same as before.
 - The website version has a real title, a description for link previews and the Glyph Garden icon.
 - Add `?newtab` to the website's URL to see the plain new-tab look (the store screenshots use it).
 - The README links to the demo and the Chrome Web Store.

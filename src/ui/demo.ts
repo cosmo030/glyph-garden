@@ -1,9 +1,10 @@
 // The website version of the page, served at glyph.cosmo030.com so people can try the garden
 // without installing anything.
 //
-// It is the same page with two changes. The search box is hidden: it is a new-tab feature, and on a
-// website it would only send people off to a search engine. And a thin bar at the top says what this
-// is and where to get it, because a visitor has not installed anything and may not know it is a new tab.
+// It is the same page, search box included, because the search box is what makes it read as a new tab.
+// A thin bar at the top says what this is and where to get it, because a visitor has not installed
+// anything. On the website the search box doesn't take focus on load (so the arrow keys switch scenes)
+// and opens results in a new tab (so the garden stays open): see vite.preview.config.ts and app.ts.
 
 /** Where to get the extension. An entry without `href` is shown as plain text (not available yet). */
 const GET_LINKS: readonly { label: string; href?: string }[] = [
@@ -28,11 +29,10 @@ export function isDemo(): boolean {
   return !isExtension && !new URLSearchParams(location.search).has('newtab');
 }
 
-/** Turns the page into the website demo: hides the search box and adds the top bar. */
+/** Turns the page into the website demo by adding the top bar. */
 export function setUpDemo(ui: HTMLElement): void {
-  // The website's title and favicon come from vite.preview.config.ts. The `demo` class hides the search box (see style.css), so the extension's markup stays untouched.
-  document.documentElement.classList.add('demo');
-
+  // The website's title and favicon come from vite.preview.config.ts, so the extension's markup stays
+  // untouched.
   const bar = document.createElement('nav');
   bar.className = 'demo-bar';
   bar.setAttribute('aria-label', 'About Glyph Garden');
