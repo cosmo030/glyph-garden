@@ -187,6 +187,7 @@ export const schema = {
       shootEvery: num('Shooting star every (s)', 2, 120, 0.5, 9),
       shootSpeed: num('Shooting star speed (cells/s)', 10, 150, 1, 62),
       shootLength: num('Shooting star trail (cells)', 2, 30, 0.5, 12),
+      shootPath: num('Shooting star path (share of width)', 0.1, 1, 0.01, 0.45),
       colShoot: color('Shooting star colour', '#eef3ff'),
     },
   },
