@@ -620,6 +620,10 @@ export class Meadow implements Scene {
    * The stars: mostly faint "·", some "•", and a few bright "+" with a soft tile. They fill the sky
    * down to the hills, thinning toward the horizon the way haze hides the low ones, and twinkle
    * slowly. Their places come from a hash, so none are stored.
+   *
+   * The whole sky drifts slowly from left to right, the way the night sky turns (east to west, looking
+   * south), wrapping round at the edges. The shift comes from the time of day (Star drift times the
+   * minutes since midnight), so the stars stand in the same place at the same hour in every tab.
    */
   private drawStars(r: GlyphRenderer, world: World) {
     const m = world.params.meadow;
@@ -629,8 +633,10 @@ export class Meadow implements Scene {
     const skyRows = Math.max(1, this.horizon(world) - m.farHills * 0.55 - 1);
     // A density rather than a count, so a big screen gets as starry a sky as a small one
     const count = Math.min(MAX_STARS, Math.round((m.starDensity / 1000) * world.cols * skyRows));
+    const cols = world.cols;
+    const shift = m.starDrift * world.clock.minutes;
     for (let i = 0; i < count; i++) {
-      const x = Math.floor(hash2(i, 0, SEED) * world.cols);
+      const x = Math.floor((((hash2(i, 0, SEED) * cols + shift) % cols) + cols) % cols);
       // u^1.4 puts more stars high up and fewer near the horizon
       const u = Math.pow(hash2(i, 1, SEED), 1.4);
       const y = Math.floor(u * skyRows);
