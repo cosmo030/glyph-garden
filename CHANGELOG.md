@@ -15,8 +15,9 @@ All notable changes are listed here. The format follows
 - The website version has a real title, a description for link previews and the Glyph Garden icon.
 - Add `?newtab` to the website's URL to see the plain new-tab look (the store screenshots use it).
 - The README links to the demo and the Chrome Web Store.
-- Shooting stars in the Meadow: now and then one crosses the upper sky and fades (`*--···`). New Tune
-  sliders for how often, how fast and how long the trail is.
+- Shooting stars in the Meadow: now and then one comes in over the top or a side edge, crosses a good
+  part of the sky and fades out well above the hills (`*--···`). New Tune sliders for how often, how
+  fast, how long the trail is and how far it travels.
 - The Meadow is now a field that runs to the horizon. A sky gradient, two ranges of rolling hills and
   the field are painted behind the characters (new Landscape settings: sky colours and curve,
   horizon height, hill heights and colours, field colours). The grass is drawn in rows from the

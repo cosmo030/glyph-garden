@@ -59,6 +59,9 @@ const SHOOT_HEAD = glyph('*');
 const SHOOT_STREAK = glyph('-'); // the bright part of the trail, right behind the head
 const SHOOT_TRAIL = glyph('·'); // the fading rest of it
 const SHOOT_STREAK_PART = 0.4; // how much of the trail is streak
+const SHOOT_FROM_TOP = 0.65; // share that come in over the top edge; the rest over a side
+const SHOOT_END = 0.7; // a path ends by this share of the way down to the hills
+const SHOOT_FADE = 0.45; // the last share of its life it spends fading out
 // Grass. Far rows are single marks; nearer rows are blades that end in a tip.
 const BLADE = glyph('|');
 const LEAN_RIGHT = glyph('/');
@@ -382,25 +385,52 @@ export class Meadow implements Scene {
   /**
    * Starts a shooting star now and then (on average every Shooting star every seconds, but never on
    * a beat), moves the ones in flight along their straight path and drops the ones that have faded.
+   *
+   * Most come in over the top edge, the rest over a side edge, and cross a good part of the sky
+   * (Shooting star path, as a share of the screen width). The path is cut short so it ends well above
+   * the hills, and the star has faded out by then, so it never looks like it flies off into the field.
    */
   private stepShootingStars(dt: number, world: World) {
     const m = world.params.meadow;
     if (world.time >= this.nextShoot) {
       this.nextShoot = world.time + m.shootEvery * rand(0.5, 1.5);
       if (this.sn < SHOOT_CAP) {
-        const i = this.sn++;
-        const top = this.horizon(world) - m.farHills - 2;
-        // A shallow path down to the left or right, starting in the upper part of the sky
-        const angle = rand(0.25, 0.6); // radians below the horizontal
-        const side = Math.random() < 0.5 ? -1 : 1;
-        this.sx[i] = rand(0.1, 0.9) * world.cols;
-        this.sy[i] = rand(0.03, 0.4) * top;
-        this.sdx[i] = Math.cos(angle) * side;
-        this.sdy[i] = Math.sin(angle);
-        this.sSpeed[i] = m.shootSpeed * rand(0.8, 1.2);
-        this.sAge[i] = 0;
-        this.sLife[i] = rand(0.6, 1.1);
-        this.sDist[i] = 0;
+        const sky = this.horizon(world) - m.farHills; // the top of the hills, roughly
+        const cols = world.cols;
+        let x0: number;
+        let y0: number;
+        let angle: number; // radians below the horizontal
+        let side: number; // 1 flies to the right, -1 to the left
+        if (Math.random() < SHOOT_FROM_TOP) {
+          // Over the top edge, fairly steep, mostly heading toward the middle of the screen
+          x0 = rand(0.05, 0.95) * cols;
+          y0 = -1;
+          angle = rand(0.35, 0.75);
+          side = x0 < cols / 2 !== Math.random() < 0.25 ? 1 : -1;
+        } else {
+          // Over a side edge, in the upper sky, flatter
+          side = Math.random() < 0.5 ? 1 : -1;
+          x0 = side > 0 ? -1 : cols + 1;
+          y0 = rand(0.02, 0.35) * sky;
+          angle = rand(0.12, 0.4);
+        }
+        const dx = Math.cos(angle) * side;
+        const dy = Math.sin(angle);
+        // Cross Shooting star path of the width, but end well above the hills
+        const want = (rand(0.8, 1.2) * m.shootPath * cols) / Math.abs(dx);
+        const room = (sky * SHOOT_END - y0) / dy;
+        const length = Math.min(want, room);
+        if (length > 8) {
+          const i = this.sn++;
+          this.sx[i] = x0;
+          this.sy[i] = y0;
+          this.sdx[i] = dx;
+          this.sdy[i] = dy;
+          this.sSpeed[i] = m.shootSpeed * rand(0.8, 1.2);
+          this.sAge[i] = 0;
+          this.sLife[i] = length / this.sSpeed[i];
+          this.sDist[i] = 0;
+        }
       }
     }
     for (let i = 0; i < this.sn; i++) {
@@ -592,8 +622,8 @@ export class Meadow implements Scene {
 
   /**
    * Shooting stars: a bright "*" head, then a streak of "-" and a tail of "·" that fade with distance
-   * (it reads as *--··· in motion). The whole streak fades in fast and out more slowly over its short
-   * life.
+   * (it reads as *--··· in motion). It comes in at full brightness (it enters from off screen) and
+   * fades out over the last part of its path, so it is gone before the path ends.
    */
   private drawShootingStars(r: GlyphRenderer, world: World) {
     if (this.sn === 0) return;
@@ -602,7 +632,8 @@ export class Meadow implements Scene {
     const len = m.shootLength;
     for (let i = 0; i < this.sn; i++) {
       const e = this.sAge[i] / this.sLife[i];
-      const bright = Math.min(1, e / 0.12) * Math.pow(1 - e, 0.8);
+      const fadeOut = e < 1 - SHOOT_FADE ? 1 : Math.pow((1 - e) / SHOOT_FADE, 1.3);
+      const bright = Math.min(1, e / 0.05) * fadeOut;
       const hx = this.sx[i];
       const hy = this.sy[i];
       const trail = Math.min(len, this.sDist[i]);

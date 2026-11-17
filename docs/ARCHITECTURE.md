@@ -230,9 +230,12 @@ See the header comment in `src/scenes/meadow.ts`. In short:
   screens look equally starry. More of them sit high up and the lowest are dimmer, like haze near the
   horizon, and they twinkle slowly (Twinkle). Their places and kinds come from a hash, so none are
   stored. Shooting stars start at a random time around every Shooting star every seconds (the
-  first a few seconds after the scene opens) in the upper sky, cross it on a shallow straight path and
-  fade within a second: a "*" head, a "-" streak and a "·" tail (Shooting star speed, trail). Up to
-  three are kept in small typed arrays.
+  first a few seconds after the scene opens). About two in three come in over the top edge (fairly
+  steep, mostly heading toward the middle), the rest over a side edge in the upper sky (flatter). Each
+  crosses about Shooting star path of the screen width, but its path is cut short so it ends 70% of
+  the way down to the hills, and it fades out over the last 45% of its life, so it is gone well above
+  the field. It is drawn as a "*" head, a "-" streak and a "·" tail (Shooting star speed, trail). Up
+  to three are kept in small typed arrays.
 
 ## Common changes
 
