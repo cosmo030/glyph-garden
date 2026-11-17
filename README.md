@@ -19,10 +19,10 @@ Works in Chrome, Brave, Edge and other Chromium browsers, and in Firefox.
 - **Scenes**: each habitat is a scene with its own creatures, look and greeting lines. Click the scene
   name at the bottom left, or press the left and right arrow keys, to step through the Pond and the
   Meadow. The scene you pick is remembered.
-- **Night meadow**: fireflies drift over swaying grass under a few twinkling stars. Each firefly
-  flashes on its own cycle, and neighbours nudge each other, so over half a minute or so the meadow
-  falls into flashing waves and groups. Each flash glows as a round ramp of characters (. : + *) on
-  faint tiles. Press and hold to light a pulsing ring that the fireflies gather and circle around;
+- **Night meadow**: a clear, starry sky over swaying grass, with a faint glow along the horizon and
+  now and then a shooting star. Small fireflies drift low above the grass. Each one flashes on its own
+  cycle, and neighbours nudge each other, so over half a minute or so they fall into flashing waves
+  and groups. Press and hold to light a pulsing ring that the fireflies rise to and circle around;
   tap to make the nearby ones flash.
 - **Koi pond**: schooling koi in five colour types. Click to drop food: nearby fish startle away from
   the splash, then race back to eat and grow a little.

@@ -15,6 +15,22 @@ All notable changes are listed here. The format follows
 - The website version has a real title, a description for link previews and the Glyph Garden icon.
 - Add `?newtab` to the website's URL to see the plain new-tab look (the store screenshots use it).
 - The README links to the demo and the Chrome Web Store.
+- Shooting stars in the Meadow: now and then one crosses the upper sky and fades (`*--···`). New Tune
+  sliders for how often, how fast and how long the trail is.
+- A faint glow along the Meadow's horizon (Horizon glow, height and colour).
+
+### Changed
+
+- The Meadow is calmer and reads more like a real night: the fireflies now stay in a low band just
+  above the grass (new Firefly band and Hover pull sliders) and are smaller and softer (smaller glow,
+  softer tiles, 42 instead of 90). The sky above is open and clear, with many more stars in three
+  sizes that twinkle slowly. Holding a light up in the sky still draws the fireflies up to it, and
+  they sink back when you let go.
+- Stars are now set as a density (Stars per 1000 sky cells), so large screens are as starry as small
+  ones. The old Stars count is replaced.
+- A new night greeting in the Meadow: "Keep an eye on the sky."
+- Settings you have already saved keep their values, so you may still see the old, bigger fireflies.
+  Use "Reset meadow" in the Tune panel's Meadow group to get the new defaults.
 
 ## [0.3.0] - 2026-11-15
 
