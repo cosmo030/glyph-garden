@@ -148,6 +148,10 @@ export const schema = {
       hover: num('Hover pull', 0, 3, 0.01, 0.6),
       drift: num('Drift speed (cells/s, nearest)', 0, 6, 0.05, 0.9),
       wander: num('Wander', 0, 3, 0.01, 1),
+      // Strays: now and then one drifts up out of the field, fades away, and a new one fades in
+      strayRate: num('Strays (per minute)', 0, 20, 0.1, 2),
+      strayRise: num('Stray rise (cells)', 2, 40, 0.5, 14),
+      strayTime: num('Stray time (s)', 3, 30, 0.5, 11),
       colFirefly: color('Firefly colour', '#d6ea5a'),
       // Flashing. Each firefly has a flash cycle (phase 0 to 1); the flash is the first part of it.
       flashRate: num('Flash rate (Hz)', 0.1, 2, 0.01, 0.45),

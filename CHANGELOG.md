@@ -25,6 +25,8 @@ All notable changes are listed here. The format follows
   and near, Distance haze, Gusts).
 - Fireflies have a depth in the field: far ones are small, dim and slow, near ones hover higher and
   glow a little wider. Grass in front of a firefly hides it.
+- Stray fireflies: now and then one drifts up out of the field into the low sky and fades away, and a
+  new one fades in somewhere over the field (Strays per minute, Stray rise, Stray time).
 
 ### Changed
 
