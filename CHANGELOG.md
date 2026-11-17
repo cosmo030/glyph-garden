@@ -29,6 +29,8 @@ All notable changes are listed here. The format follows
 - The Meadow's sky follows the clock: a warm dusk, the darkest sky after midnight, a faint warm line
   before dawn, a soft blue by day; the stars fade in and out with it (Sky follows the clock, on by
   default; turn it off to use the colour sliders).
+- The Meadow's stars drift very slowly across the sky, the way the night sky turns, and stand in the
+  same place at the same time of day (Star drift).
 - Add `?at=2026-11-20T05:30` to the URL to set the page's clock to that moment, for checking the
   time-of-day looks.
 - Stray fireflies: now and then one drifts up out of the field into the low sky and fades away, and a

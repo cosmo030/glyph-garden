@@ -186,6 +186,7 @@ export const schema = {
       // The night sky: stars and now and then a shooting star
       starDensity: num('Stars (per 1000 sky cells)', 0, 120, 0.5, 48),
       twinkle: num('Twinkle', 0, 1, 0.01, 0.35),
+      starDrift: num('Star drift (cells per minute)', 0, 5, 0.05, 0.5),
       colStar: color('Star colour', '#b9c6e8'),
       shootEvery: num('Shooting star every (s)', 2, 120, 0.5, 9),
       shootSpeed: num('Shooting star speed (cells/s)', 10, 150, 1, 62),

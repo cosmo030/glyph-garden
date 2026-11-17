@@ -237,7 +237,9 @@ See the header comment in `src/scenes/meadow.ts`. In short:
 - **Night sky.** Stars fill the sky down to the hills: mostly faint "·", some "•" and a few
   bright "+" on a soft tile. Their number is a density (Stars per 1000 sky cells), so big and small
   screens look equally starry. More of them sit high up and the lowest are dimmer, like haze near the
-  horizon, and they twinkle slowly (Twinkle). Their places and kinds come from a hash, so none are
+  horizon, and they twinkle slowly (Twinkle). The sky drifts from left to right by Star drift cells
+  per minute, wrapping round, the way the night sky turns; the shift is taken from the time of day, so
+  the stars stand in the same place at the same hour. Their places and kinds come from a hash, so none are
   stored. Shooting stars start at a random time around every Shooting star every seconds (the
   first a few seconds after the scene opens). About two in three come in over the top edge (fairly
   steep, mostly heading toward the middle), the rest over a side edge in the upper sky (flatter). Each
