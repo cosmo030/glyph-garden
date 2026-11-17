@@ -105,7 +105,8 @@ interface in `src/sim/world.ts`:
   scene's own settings and stay tunable. The renderer uses it for the active scene, and falls back to
   World > Background when a scene leaves it out (the Pond does).
 - `enter`, `rescale`, `step`, `draw`, `pointerDown`, `pointerUp`, `count`: the same lifecycle the
-  koi always had. `pointerUp` is the end of a press that began on the canvas, for press-and-hold.
+  koi always had. `pointerUp` is the end of a press that began on the canvas, so a scene can tell a
+  quick tap from a long press.
 
 **Which scene is on show** (`src/app.ts`, `src/scenes/index.ts`):
 
@@ -194,13 +195,8 @@ See the header comment in `src/scenes/meadow.ts`. In short:
   spring (Hover pull) toward its own height in the band. That height is stored as a place in the band
   (0 at its top, 1 at its bottom), so resizing the window or changing Firefly band moves them along.
   They wrap at the sides and never go into the grass.
-- **Touch.** Press and hold (longer than Tap length) fades in a ring of "•" on faint tiles at the
-  cursor, with a very faint tinted fill inside (Light fill). The ring breathes in radius and brightness
-  (Light pulse, Light pulse speed) around Light radius. Fireflies
-  within Gather radius are pulled toward the ring and pushed around it, so they gather and circle.
-  While the light holds a firefly, its Hover pull loosens (by how close it is), so they can rise to a
-  light held up in the sky. Letting go fades the light out and they sink back to their band. A shorter press is a tap: every firefly within
-  Tap flash radius flashes at once, and the coupling carries the flash outward.
+- **Touch.** A tap (a press shorter than Tap length) makes every firefly within Tap flash radius
+  flash at once, and the coupling carries the flash outward. A longer press does nothing.
 - **Grass and sky.** The grass is a band of "|", "/" and "\\" blades in two greens (Grass colour and
   Grass colour (dark), picked per blade), a little darker at the root, on a faint tile (Grass tile
   strength). Each blade ends in a lighter tip (Grass tip colour) that leans with the wind. The lean

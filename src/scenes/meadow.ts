@@ -28,14 +28,13 @@ import type { Band, Scene, World } from '../sim/world';
 // colour behind it. Where two glows overlap the brighter cell wins, so the picture does not depend
 // on the order the fireflies are drawn in.
 //
-// Touch: press and hold lights a pulsing ring with a faint tinted fill at the cursor, and the
-// fireflies nearby gather and circle it; let go and they drift apart again. A short tap makes every
-// firefly within `tapRadius` flash at once, and the coupling carries that flash outward.
+// Touch: a tap makes every firefly within `tapRadius` flash at once, and the coupling carries that
+// flash outward. A longer press does nothing, so a slow click or a drag doesn't set them off.
 
 const CAP = 300; // max fireflies
 const SEED = 7; // makes the stars and grass the same every time
 
-const CORE = glyph('•'); // a firefly's own cell, and the dots of the hold ring
+const CORE = glyph('•'); // a firefly's own cell
 // The light ramp, dim to bright, and the intensity at which each step starts
 const RAMP = [glyph('·'), glyph(':'), glyph('+'), glyph('*')];
 const RAMP_FROM = [0, 0.12, 0.28, 0.5];
@@ -64,7 +63,7 @@ const TAU = Math.PI * 2;
 export class Meadow implements Scene {
   readonly id = 'meadow';
   readonly name = 'Meadow';
-  readonly hint = 'hold to glow';
+  readonly hint = 'tap the fireflies';
   // The first letter may be lowercased when a name goes in front, so no line starts with a proper noun.
   readonly greetings: Record<Band, readonly string[]> = {
     morning: ['The grass is still wet.', 'The little lights have gone to sleep.', 'Dew on every blade.'],
@@ -108,10 +107,9 @@ export class Meadow implements Scene {
   private touched = new Int32Array(0);
   private tn = 0;
 
-  // Press and hold
-  private held = false;
+  // The press that may become a tap
+  private pressed = false;
   private pressedAt = 0;
-  private light = 0; // 0 to 1: how strongly the light is on (fades in once a press counts as a hold)
 
   // Shooting stars, also parallel typed arrays: position of the head, unit direction, speed, age and
   // lifetime in seconds, and how far it has travelled (the trail never reaches back past its start)
@@ -129,8 +127,7 @@ export class Meadow implements Scene {
   enter(world: World) {
     this.n = 0;
     this.qn = 0;
-    this.held = false;
-    this.light = 0;
+    this.pressed = false;
     this.sn = 0;
     // The first one comes soon, so a visitor who only stays a moment still sees one
     this.nextShoot = world.time + rand(2, 5);
@@ -186,16 +183,16 @@ export class Meadow implements Scene {
     this.rateJ[i] = rand(-1, 1);
   }
 
-  /** Press: start of a possible hold (it counts as a hold once it lasts longer than the tap length). */
+  /** Press: the start of a possible tap. */
   pointerDown(_x: number, _y: number, world: World) {
-    this.held = true;
+    this.pressed = true;
     this.pressedAt = world.time;
   }
 
-  /** Release: a short press was a tap, so every firefly nearby flashes now; a long one just lets go. */
+  /** Release: a press shorter than Tap length was a tap, so every firefly nearby flashes now. */
   pointerUp(x: number, y: number, world: World) {
     const m = world.params.meadow;
-    if (this.held && world.time - this.pressedAt < m.tapTime) {
+    if (this.pressed && world.time - this.pressedAt < m.tapTime) {
       const r2 = m.tapRadius * m.tapRadius;
       for (let i = 0; i < this.n; i++) {
         const dx = this.x[i] - x;
@@ -205,7 +202,7 @@ export class Meadow implements Scene {
         if (this.qn < CAP) this.queue[this.qn++] = i; // and nudges its neighbours on the next step
       }
     }
-    this.held = false;
+    this.pressed = false;
   }
 
   /** One fixed step: flash cycles and their coupling first, then the movement. */
@@ -213,11 +210,6 @@ export class Meadow implements Scene {
     this.syncCount(world);
     const m = world.params.meadow;
     const n = this.n;
-
-    // ---- The light under your finger fades in once you have held longer than a tap, and out on release ----
-    if (this.held && world.time - this.pressedAt >= m.tapTime)
-      this.light = Math.min(1, this.light + dt / (m.lightFade * 0.4));
-    else if (!this.held) this.light = Math.max(0, this.light - dt / m.lightFade);
 
     // ---- Flash cycles: every firefly moves along its own cycle; reaching 1 means it flashes ----
     for (let i = 0; i < n; i++) {
@@ -262,47 +254,19 @@ export class Meadow implements Scene {
     const wanderDecay = Math.exp(-0.5 * dt);
     const relax = 1 - Math.exp(-1.5 * dt); // how quickly velocity settles on where it wants to go
     const span = world.cols + 4;
-    const gather = this.light > 0.001;
-    const cx = world.cursor.x;
-    const cy = world.cursor.y;
-    const pull = m.gatherPull * this.light;
-    const orbit = m.orbitSpeed * this.light;
     for (let i = 0; i < n; i++) {
       // Gentle wandering: the heading turns by a slowly changing amount (a smoothed random walk)
       this.wanderA[i] = this.wanderA[i] * wanderDecay + gauss() * m.wander * sqrtDt;
       this.heading[i] += this.wanderA[i] * dt;
       const speed = m.drift * this.pace[i];
 
-      // How strongly the light holds this firefly: 0 out of reach, up to 1 close to it
-      let dx = 0;
-      let dy = 0;
-      let d = 0;
-      let fall = 0;
-      if (gather) {
-        dx = cx - this.x[i];
-        dy = cy - this.y[i];
-        d = Math.hypot(dx, dy);
-        if (d < m.gatherRadius && d > 1e-3) fall = Math.min(1, 2 * (1 - d / m.gatherRadius));
-      }
-
       // A spring toward the height it likes (Hover pull), so they stay in their band above the grass.
-      // The light loosens it, so they can rise to a light held up in the sky and sink back afterwards.
       // Half the vertical drift, so they mostly wander sideways, the way fireflies over a field do.
       const homeY = bandTop + this.home[i] * (sky - bandTop);
-      const hoverPull = m.hover * (1 - fall * this.light);
       const tx = Math.cos(this.heading[i]) * speed;
-      const ty = Math.sin(this.heading[i]) * speed * 0.5 + (homeY - this.y[i]) * hoverPull;
+      const ty = Math.sin(this.heading[i]) * speed * 0.5 + (homeY - this.y[i]) * m.hover;
       this.vx[i] += (tx - this.vx[i]) * relax;
       this.vy[i] += (ty - this.vy[i]) * relax;
-
-      // Gather and circle the light: pulled toward a ring around it, pushed sideways along the ring
-      if (fall > 0) {
-        const radial = Math.max(-1, Math.min(1, (d - m.lightRadius) / m.lightRadius));
-        const a = pull * fall * radial;
-        const b = orbit * fall;
-        this.vx[i] += ((dx / d) * a - (dy / d) * b) * dt;
-        this.vy[i] += ((dy / d) * a + (dx / d) * b) * dt;
-      }
 
       this.x[i] += this.vx[i] * dt;
       this.y[i] += this.vy[i] * dt;
@@ -367,14 +331,13 @@ export class Meadow implements Scene {
     }
   }
 
-  /** Draws the sky (horizon glow, stars, shooting stars), the grass, the hold light, then the fireflies. */
+  /** Draws the sky (horizon glow, stars, shooting stars), the grass, then the fireflies. */
   draw(r: GlyphRenderer, world: World) {
     const top = this.bandTop(world);
     this.drawHorizon(r, world);
     this.drawStars(r, world, top);
     this.drawShootingStars(r, world);
     this.drawGrass(r, world);
-    this.drawLight(r, world);
     this.drawFireflies(r, world);
   }
 
@@ -462,52 +425,6 @@ export class Meadow implements Scene {
       }
     }
     this.tn = 0;
-  }
-
-  /**
-   * The light while held: a very faint tinted fill, and a brighter ring of "•" on faint tiles that
-   * breathes in radius and brightness (Light pulse, Light pulse speed).
-   */
-  private drawLight(r: GlyphRenderer, world: World) {
-    if (this.light <= 0.02) return;
-    const m = world.params.meadow;
-    const col = rgb(m.colFirefly);
-    const beat = Math.sin(world.time * TAU * m.lightPulseSpeed);
-    const rad = m.lightRadius * (1 + m.lightPulse * beat);
-    const glowK = this.light * (0.85 + 0.15 * beat);
-    const cx = world.cursor.x;
-    const cy = world.cursor.y;
-    const x0 = Math.floor(cx);
-    const y0 = Math.floor(cy);
-
-    // Fill: every cell centre inside the ring, a little stronger toward the middle
-    const reach = Math.ceil(rad);
-    for (let oy = -reach; oy <= reach; oy++) {
-      for (let ox = -reach; ox <= reach; ox++) {
-        const dx = x0 + ox + 0.5 - cx;
-        const dy = y0 + oy + 0.5 - cy;
-        const d = Math.sqrt(dx * dx + dy * dy);
-        if (d >= rad) continue;
-        r.push(x0 + ox, y0 + oy, packRgb(col, m.lightFill * this.light * (0.6 + 0.4 * (1 - d / rad))), 0, 0);
-      }
-    }
-
-    // Ring: "•" about one cell apart, turning slowly, each on a faint tile
-    const dots = Math.max(12, Math.floor((TAU * rad) / 1.1));
-    const fg = packShade(col, 0.4, Math.min(1, 0.95 * glowK));
-    const bg = packRgb(col, 0.45 * glowK);
-    let lastX = 1e9;
-    let lastY = 1e9;
-    for (let d = 0; d < dots; d++) {
-      const a = (d / dots) * TAU + world.time * 0.3;
-      const px = Math.floor(cx + Math.cos(a) * rad);
-      const py = Math.floor(cy + Math.sin(a) * rad);
-      if (px === lastX && py === lastY) continue;
-      lastX = px;
-      lastY = py;
-      r.push(px, py, bg, fg, CORE);
-    }
-    r.push(x0, y0, packRgb(col, 0.35 * glowK), packShade(col, 0.5, Math.min(1, glowK)), CORE);
   }
 
   /**

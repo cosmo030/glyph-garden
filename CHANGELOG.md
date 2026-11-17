@@ -24,13 +24,20 @@ All notable changes are listed here. The format follows
 - The Meadow is calmer and reads more like a real night: the fireflies now stay in a low band just
   above the grass (new Firefly band and Hover pull sliders) and are smaller and softer (smaller glow,
   softer tiles, 42 instead of 90). The sky above is open and clear, with many more stars in three
-  sizes that twinkle slowly. Holding a light up in the sky still draws the fireflies up to it, and
-  they sink back when you let go.
+  sizes that twinkle slowly.
 - Stars are now set as a density (Stars per 1000 sky cells), so large screens are as starry as small
   ones. The old Stars count is replaced.
 - A new night greeting in the Meadow: "Keep an eye on the sky."
 - Settings you have already saved keep their values, so you may still see the old, bigger fireflies.
   Use "Reset meadow" in the Tune panel's Meadow group to get the new defaults.
+- The Meadow's hint now reads "tap the fireflies".
+
+### Removed
+
+- Press and hold on the Meadow (the light ring that fireflies gathered around), with its eight Tune
+  sliders. A tap still makes the fireflies nearby flash.
+- Store screenshot 4 is now the Meadow right after a tap (`04-meadow-tap.png`) instead of while
+  holding.
 
 ## [0.3.0] - 2026-11-15
 

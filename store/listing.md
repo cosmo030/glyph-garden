@@ -24,8 +24,7 @@ It is 100 characters.
 >
 > **The Meadow.** Fireflies flash in the dark above swaying grass. Each one keeps its own rhythm, and
 > neighbours nudge each other, so over a minute or so the meadow slips into waves and groups of light.
-> Press and hold to light a soft ring that the fireflies gather around. Tap to make the nearby ones
-> flash.
+> Tap near them to make the nearby ones flash.
 >
 > Click the scene name in the bottom left, or press the left and right arrow keys, to switch scene.
 > Your choice is remembered.
@@ -93,14 +92,13 @@ The new-tab override (`chrome_url_overrides.newtab`) is declared in the manifest
 | `screenshots/01-pond.png`             | 1280x800 | Screenshot 1 in both stores: the Pond                                         |
 | `screenshots/02-pond-feeding.png`     | 1280x800 | Screenshot 2: feeding the koi                                                 |
 | `screenshots/03-meadow-flashing.png`  | 1280x800 | Screenshot 3: the Meadow flashing                                             |
-| `screenshots/04-meadow-holding.png`   | 1280x800 | Screenshot 4: the Meadow while holding                                        |
+| `screenshots/04-meadow-tap.png`       | 1280x800 | Screenshot 4: the Meadow, fireflies flashing after a tap                      |
 | `screenshots/05-tune-panel.png`       | 1280x800 | Screenshot 5: the Tune panel (the Chrome limit is 5 screenshots)              |
 | `promo-440x280.png`                   | 440x280  | Chrome: small promo tile                                                      |
 | `marquee-1400x560.png`                | 1400x560 | Chrome: marquee promo tile (optional)                                         |
 
 Suggested screenshot captions (AMO allows one per image): "The Pond: koi drift across the page",
-"Click to feed them", "The Meadow: fireflies flash and fall into step", "Press and hold: they gather
-around the light", "Every number is a slider".
+"Click to feed them", "The Meadow: fireflies flash and fall into step", "Tap and they all light up", "Every number is a slider".
 
 ## Version notes (what's new)
 

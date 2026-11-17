@@ -22,8 +22,7 @@ Works in Chrome, Brave, Edge and other Chromium browsers, and in Firefox.
 - **Night meadow**: a clear, starry sky over swaying grass, with a faint glow along the horizon and
   now and then a shooting star. Small fireflies drift low above the grass. Each one flashes on its own
   cycle, and neighbours nudge each other, so over half a minute or so they fall into flashing waves
-  and groups. Press and hold to light a pulsing ring that the fireflies rise to and circle around;
-  tap to make the nearby ones flash.
+  and groups. Tap near them to make the nearby ones flash.
 - **Koi pond**: schooling koi in five colour types. Click to drop food: nearby fish startle away from
   the splash, then race back to eat and grow a little.
 - **Tune panel**: every number in the simulation is a live slider. Settings save automatically,
