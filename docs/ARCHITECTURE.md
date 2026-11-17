@@ -189,20 +189,32 @@ See the header comment in `src/scenes/meadow.ts`. In short:
   flashes run through the meadow as waves. Neighbours fall into step over time and the meadow flashes
   in groups; with Coupling 0 each firefly flashes on its own. The rates and the coupling are tuned
   together: a smaller Rate spread makes the groups form faster and tighter.
-- **Movement.** Fireflies drift on a slowly turning heading, with a soft spring toward a personal
-  hover height (mostly the middle and upper sky). They wrap at the sides, and are kept above the
-  grass.
+- **Movement.** Fireflies live in a low band just above the grass (Firefly band, in cells). Each one
+  drifts on a slowly turning heading (half speed vertically, so they mostly wander sideways), with a
+  spring (Hover pull) toward its own height in the band. That height is stored as a place in the band
+  (0 at its top, 1 at its bottom), so resizing the window or changing Firefly band moves them along.
+  They wrap at the sides and never go into the grass.
 - **Touch.** Press and hold (longer than Tap length) fades in a ring of "•" on faint tiles at the
   cursor, with a very faint tinted fill inside (Light fill). The ring breathes in radius and brightness
   (Light pulse, Light pulse speed) around Light radius. Fireflies
   within Gather radius are pulled toward the ring and pushed around it, so they gather and circle.
-  Letting go fades the light out and they drift apart. A shorter press is a tap: every firefly within
+  While the light holds a firefly, its Hover pull loosens (by how close it is), so they can rise to a
+  light held up in the sky. Letting go fades the light out and they sink back to their band. A shorter press is a tap: every firefly within
   Tap flash radius flashes at once, and the coupling carries the flash outward.
 - **Grass and sky.** The grass is a band of "|", "/" and "\\" blades in two greens (Grass colour and
   Grass colour (dark), picked per blade), a little darker at the root, on a faint tile (Grass tile
   strength). Each blade ends in a lighter tip (Grass tip colour) that leans with the wind. The lean
-  follows a slow travelling wind wave (Grass height, density, sway; Wind speed). Stars are "." cells whose places
-  come from a hash, so none are stored. The background is the scene's own deep blue-black.
+  follows a slow travelling wind wave (Grass height, density, sway; Wind speed). The background is
+  the scene's own deep blue-black.
+- **Night sky.** Stars fill the sky above the firefly band: mostly faint "·", some "•" and a few
+  bright "+" on a soft tile. Their number is a density (Stars per 1000 sky cells), so big and small
+  screens look equally starry. More of them sit high up and the lowest are dimmer, like haze near the
+  horizon, and they twinkle slowly (Twinkle). Their places and kinds come from a hash, so none are
+  stored. Behind them, a faint glow of Horizon colour tiles fades upward from the bottom over Horizon
+  glow height. Shooting stars start at a random time around every Shooting star every seconds (the
+  first a few seconds after the scene opens) in the upper sky, cross it on a shallow straight path and
+  fade within a second: a "*" head, a "-" streak and a "·" tail (Shooting star speed, trail). Up to
+  three are kept in small typed arrays.
 
 ## Common changes
 
