@@ -21,7 +21,7 @@ export default defineConfig({
  */
 function websiteHead(): Plugin {
   const description =
-    'A calm new tab of animals drawn with keyboard characters. Feed the koi, or hold still for fireflies.';
+    'Calm animated new tab in ASCII art: feed koi in a pond, or watch fireflies under a starry night sky. Private, no tracking.';
   return {
     name: 'glyph-garden-website-head',
     transformIndexHtml: (html) =>
