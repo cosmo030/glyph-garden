@@ -8,7 +8,8 @@ export default defineConfig({
   manifest: ({ browser }) => ({
     name: 'Glyph Garden',
     // The stores show this as the short description; Chrome allows at most 132 characters.
-    description: 'A calm new tab of animals drawn with keyboard characters. Feed the koi, or hold still for fireflies.',
+    description:
+      'Calm animated new tab in ASCII art: feed koi in a pond, or watch fireflies under a starry night sky. Private, no tracking.',
     // storage: saves your Tune settings. search: sends the search box to your default engine.
     permissions: ['storage', 'search'],
     ...(browser === 'firefox'

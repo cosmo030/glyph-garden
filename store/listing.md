@@ -1,4 +1,4 @@
-# Store listing: Glyph Garden 0.3.0
+# Store listing: Glyph Garden 0.4.0
 
 Text and answers for the Chrome Web Store and Firefox Add-ons (AMO) forms. Copy from here, so both
 stores say the same thing. The images are in this folder (`screenshots/`, `promo-*.png`,
@@ -11,35 +11,46 @@ Glyph Garden
 ## Short description
 
 Used as the Chrome "summary" (taken from the manifest, 132 characters at most) and the AMO summary.
-It is 100 characters.
+It is 122 characters. It comes from `wxt.config.ts`, so a change only reaches the store with a new
+release. It leads with the words people search for: "new tab", "ASCII art", "koi", "fireflies",
+"night sky".
 
-> A calm new tab of animals drawn with keyboard characters. Feed the koi, or hold still for fireflies.
+> Calm animated new tab in ASCII art: feed koi in a pond, or watch fireflies under a starry night sky. Private, no tracking.
 
 ## Full description
 
-> Glyph Garden turns your new tab into a quiet little habitat, drawn entirely with keyboard characters.
+Can be changed in the dashboard at any time, without a new release.
+
+> Glyph Garden turns your new tab into a calm, animated scene drawn entirely in keyboard characters:
+> ASCII art that moves. Pick a scene and open a new tab whenever you need a quiet moment.
 >
-> **The Pond.** Koi drift and school across the page. Click to drop food: nearby fish startle away from
-> the splash, then race back to eat and grow a little.
+> **The Pond.** Koi in five colour types drift and school across the page. Their bodies bend as they
+> swim, a wave runs from head to tail, and they alternate bursts of tail beats with long glides. Click
+> to drop food: nearby fish startle away from the splash, then race back to eat and grow a little.
 >
-> **The Meadow.** Fireflies flash in the dark above swaying grass. Each one keeps its own rhythm, and
-> neighbours nudge each other, so over a minute or so the meadow slips into waves and groups of light.
-> Tap near them to make the nearby ones flash.
+> **The Meadow.** A field of grass runs to the horizon under a starry night sky. Gusts of wind roll
+> through the grass, and now and then a shooting star crosses the sky. The sky follows your clock (a
+> warm dusk, deep night after midnight, a faint glow before dawn), the stars and a faint Milky Way drift
+> slowly, and the moon shows its real phase. Fireflies drift over the field, tiny in the distance and
+> larger up close. Each one flashes on its own rhythm, and neighbours nudge each other, so after a
+> while they fall into waves of light. Tap near them to make them flash.
 >
 > Click the scene name in the bottom left, or press the left and right arrow keys, to switch scene.
-> Your choice is remembered.
+> Your choice is remembered. More animals are on the way.
 >
-> **Also on the page:** a clock, a short calm greeting (add your name if you like), and a search box
-> that uses the search engine you already chose in your browser.
+> **Also on the page:** a clock, a short greeting (add your name if you like), and a search box that
+> uses the search engine you already chose in your browser.
 >
-> **Tune it.** The sliders button in the bottom right opens a panel where every number in the
-> simulation is a live slider: how many koi, how fast the fireflies flash, how bright the glow is, how
-> tall the grass grows. Settings save automatically, and you can copy and paste them as presets.
+> **Tune it.** The sliders button in the bottom right opens a panel where every number is a live
+> slider: how many koi, how fast the fireflies flash, how strong the wind is, how bright the stars
+> are. Settings save automatically, and you can copy and paste them as presets.
 >
 > **Light and private.** Everything is drawn in one WebGL2 pass, and the page stops completely while
 > the tab is hidden. Glyph Garden collects nothing, sends nothing, has no analytics and makes no network
 > requests. It needs only two permissions: `storage` (to save your settings) and `search` (to send what
 > you type to your default search engine).
+>
+> Try it in your browser first, no install needed: https://glyph.cosmo030.com
 >
 > Free and open source (MIT): https://github.com/cosmo030/glyph-garden
 
@@ -98,9 +109,18 @@ The new-tab override (`chrome_url_overrides.newtab`) is declared in the manifest
 | `marquee-1400x560.png`                | 1400x560 | Chrome: marquee promo tile (optional)                                         |
 
 Suggested screenshot captions (AMO allows one per image): "The Pond: koi drift across the page",
-"Click to feed them", "The Meadow: fireflies flash and fall into step", "Tap and they all light up", "Every number is a slider".
+"Click to feed them", "The Meadow: fireflies over a field under the night sky", "Tap and they light
+up", "Every number is a slider".
 
 ## Version notes (what's new)
+
+For 0.4.0:
+
+> The Meadow is now a field that runs to the horizon, with wind rolling through the grass, shooting
+> stars, a sky that follows your clock, a drifting Milky Way and the moon in its real phase. Fireflies
+> are small in the distance and larger up close; tap near them to make them flash.
+
+For 0.3.0:
 
 > Adds the Night meadow (fireflies, grass and stars), scenes you can switch between, a clock and calm
 > greetings, a new icon, and a Tune panel with sliders for everything.

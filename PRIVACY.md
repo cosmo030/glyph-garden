@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Glyph Garden, version 0.3.0. Last updated 15 November 2026._
+_Glyph Garden, version 0.4.0. Last updated 18 November 2026._
 
 Glyph Garden is a new-tab page. It collects nothing and sends nothing anywhere.
 

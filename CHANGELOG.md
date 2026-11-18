@@ -6,6 +6,8 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-18
+
 ### Added
 
 - A website demo at glyph.cosmo030.com: the garden runs in any browser without installing anything.
@@ -54,6 +56,9 @@ All notable changes are listed here. The format follows
 - The Meadow's hint now reads "tap the fireflies".
 - The Meadow's field caches where its grass grows, so a frame costs much less (about 0.4 ms instead of
   2.6 ms for the whole scene at 1440x900 in testing).
+- New short description in the stores, without the old press-and-hold: "Calm animated new tab in
+  ASCII art: feed koi in a pond, or watch fireflies under a starry night sky. Private, no tracking."
+  The store images are redone to show the new Meadow.
 
 ### Removed
 

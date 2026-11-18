@@ -12,7 +12,7 @@ Requirements: Node.js 22 (the `engines` field in `package.json` asks for 22 or n
 accounts or environment variables are needed.
 
 ```bash
-unzip glyph-garden-0.3.0-sources.zip -d glyph-garden-sources
+unzip glyph-garden-0.4.0-sources.zip -d glyph-garden-sources
 cd glyph-garden-sources
 npm ci
 npm run build:firefox
@@ -20,7 +20,7 @@ npm run build:firefox
 
 The add-on is then in `.output/firefox-mv2/` and matches the uploaded package. To get the same zip
 that was uploaded, run `npm run zip` (or `npx wxt zip -b firefox`) instead of the last command; it
-writes `.output/glyph-garden-0.3.0-firefox.zip`.
+writes `.output/glyph-garden-0.4.0-firefox.zip`.
 
 The build is WXT (a Vite wrapper) plus TypeScript. All dependencies are pinned by `package-lock.json`
 and come from npm. The only runtime dependency is `tweakpane` (the settings panel), which is bundled
